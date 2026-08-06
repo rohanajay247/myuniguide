@@ -5,13 +5,13 @@ Daily record of what was done. Brief by design.
 Findings live in `FINDINGS.md`. Plan lives in `WBS_10day_v4.md`.
 How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` folder.
 
-| | |
-|---|---|
-| Started | 4 Aug 2026 |
-| Plan | 10 working days, ~62 h |
-| Days elapsed | 3 |
-| Phase | 1 complete — moving to ingestion |
-| Pipeline code written | none yet (gated behind the eval set) |
+|                       |                        |
+| --------------------- | ---------------------- |
+| Started               | 4 Aug 2026             |
+| Plan                  | 10 working days, ~62 h |
+| Days elapsed          | 4                      |
+| Phase                 | 2 — ingestion          |
+| Pipeline code written | OCR (D2 complete)      |
 
 ---
 
@@ -29,7 +29,7 @@ How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` fol
 **Decided**
 
 - D1, D3, D4 extract cleanly with PyMuPDF — no OCR needed
-- D2 is a scan carrying a *bad embedded OCR layer* — needs re-OCR, not first OCR
+- D2 is a scan carrying a _bad embedded OCR layer_ — needs re-OCR, not first OCR
 - `get_text("dict")` required later, to recover superscripts and indentation
 - `find_tables()` required for D3's study plan
 - Never strip a hyphen at end of line when joining wrapped text
@@ -157,7 +157,7 @@ should not try. The target is the 0/6 on conflict detection.
 
 **Noted while writing them**
 
-- `§` is *section*; `Absatz` is *paragraph*. Translating `§` as "paragraph"
+- `§` is _section_; `Absatz` is _paragraph_. Translating `§` as "paragraph"
   yields citations that look right and point to the wrong level.
 - `Verteidigung` appears 30 times in D1 and applies to IAI **not at all**
   (D3 Re § 3 Para. 1). Term frequency is not relevance — a retrieval system
@@ -174,16 +174,62 @@ the study plan table, write the chunker. First day of pipeline code.
 
 ---
 
+## Day 4 — 6 Aug · Ingestion 🔄
+
+**Done**
+
+- `git init`, first commit, branch renamed to `main`
+- Repo restructured: `config/`, `docs/`, `data/`, `pipeline/`
+- **D2 re-OCR'd with Gemini Vision** — 22 § symbols, 0 unreadable flags,
+  amendment items 1–7 correct, sentence markers matching the source
+
+**Decided**
+
+- **Gemini Vision over Tesseract for D2.** Tesseract had better word accuracy
+  but could not read superscript sentence numbers — and on page 3 dropped one
+  entirely, which kills positional recovery.
+- Scripted via the API rather than AI Studio, specifically to pass **no `tools`
+  parameter**. AI Studio kept web-searching during transcription and citing
+  other universities' regulations, even with grounding switched off.
+
+**Learned**
+
+- **One page is an anecdote.** Page 2 made Tesseract look adequate and made
+  positional renumbering look sound. Page 3 killed both.
+- **The metric decides the tool.** Scoring on "surviving digits" ranked the
+  broken embedded layer highest and would have picked the worst option.
+  Tesseract would have won any general OCR benchmark. The right question was
+  narrower: does the structure the system depends on survive?
+- **Gemini fails invisibly.** Tesseract's errors look broken (`®Für`); Gemini's
+  look plausible — it turned amendment item `4.` into `1.` in the manual run,
+  invented "CAS/LSF" during the baseline, and computed "45 ECTS" unprompted.
+  The more dangerous failure mode.
+
+**Hit**
+
+- Temperature 0 did not give consistent formatting across pages: page 1 returned
+  real superscripts (`¹Macht`), pages 2–6 plain digits (`2Dies`). The chunker
+  regex must accept both.
+- Gemini reformatted the annex table as Markdown despite being told not to
+  reformat. Helpful, but disobedient.
+- The annex table splits across pages 5 and 6 and must be rejoined — row 11 is
+  the Portfolioprüfung definition the `Pf` finding depends on.
+
+**Next:** parse D1/D3/D4 with `get_text("dict")` to recover superscripts and
+indentation, extract the D3 study plan table, then the chunker.
+
+---
+
 ## Open risks
 
-| Risk | Status |
-|---|---|
-| Paragraphs cross page boundaries — positional renumbering will silently mis-number D2 if it assumes every paragraph starts at 1 | open, hits Day 4 |
-| Table extraction returns wrong values without erroring | open, hits Day 4 |
-| Long-context baseline may beat retrieval at 59 pages | expected; publish either way |
-| First project of five in 45 days — no schedule slack | ongoing |
+| Risk                                                                                                                            | Status                       |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Paragraphs cross page boundaries — positional renumbering will silently mis-number D2 if it assumes every paragraph starts at 1 | open, hits Day 4             |
+| Table extraction returns wrong values without erroring                                                                          | open, hits Day 4             |
+| Long-context baseline may beat retrieval at 59 pages                                                                            | expected; publish either way |
+| First project of five in 45 days — no schedule slack                                                                            | ongoing                      |
 
-**Pattern worth noting:** nearly every risk here is *silently wrong output*,
+**Pattern worth noting:** nearly every risk here is _silently wrong output_,
 not a crash. Spot-checking against the source PDFs is the only defence.
 
 ---
