@@ -1,0 +1,86 @@
+- id: D1
+  title: Studien- und Prüfungsordnung für Masterstudiengänge (Allgemeiner Teil)
+  version: "22.1"
+  filename: StuPO_Master_221_20220111.pdf
+  sha256: 0a96aa54ed3a3dd21169b535b6fd5bcfb48a62848626b32fe4b0ff8ed19ba9cc
+  bytes: 182522
+  url: https://www.hs-albsig.de/fileadmin/user_upload/hsas/02_organisationseinheiten/studentische_abteilung/downloads/stupos/StuPO_Master_221_20220111.pdf
+  retrieved: 2026-08-05
+  issued: 2022-01-11
+  in_force_from: 2022-03-01
+  language: de
+  authority: binding
+  programme: all
+  text_layer: native
+  pages: 20
+  notes: >
+    Base rulebook for all Master's programmes. Newest General Section for
+    Master; unchanged since 2022. § 1 does not list IAI. Modified by D2.
+
+- id: D2
+  title: Erste Änderungssatzung zur StuPO für Masterstudiengänge
+  version: "22.1-A1"
+  filename: 2022-07-14_StuPO_Master_Erste_AEnderungssatzung_beurkundet.pdf
+  sha256: 28cab43cbbf4086c285f9e03caef8e24ab30368c47c73ac790d50615ce73627a
+  bytes: 387975
+  url: https://www.hs-albsig.de/fileadmin/user_upload/hsas/02_organisationseinheiten/studentische_abteilung/downloads/stupos/master/2022-07-14_StuPO_Master_Erste_AEnderungssatzung_beurkundet.pdf
+  retrieved: 2026-08-05
+  issued: 2022-07-14
+  announced: 2022-07-15/2022-07-29
+  in_force_from: 2022-07-30
+  language: de
+  authority: binding
+  programme: all
+  text_layer: scan_bad_ocr
+  pages: 6
+  amends: D1
+  notes: >
+    Only amendment to D1; no second exists. Replaces the § 12 exam list
+    (renumbering, not append) and inserts §§ 12a–12e. Embedded OCR layer is
+    unusable — re-OCR with Tesseract lang=deu at 300 dpi.
+
+- id: D3
+  title: >
+    Supplementary Statutes to the Special Section of the Study and Examination
+    Regulations — Industrial Artificial Intelligence
+  version: "25.2"
+  filename: IAI_StuPO-specialPart_20250228_Ausfertigung.pdf
+  sha256: 03dcc0d3e2b95d5fed5cd002b256888a5e8b6ff10625e4d57e468f50784d1296
+  bytes: 1003799
+  url: https://www.hs-albsig.de/fileadmin/user_upload/hsas/02_organisationseinheiten/studentische_abteilung/downloads/stupos/master/IAI_StuPO-specialPart_20250228_Ausfertigung.pdf
+  retrieved: 2026-08-05
+  issued: 2025-02-28
+  announced: 2025-03-03/2025-03-17
+  in_force_from: 2025-03-01
+  language: en
+  authority: binding
+  programme: iai
+  text_layer: native
+  pages: 7
+  amends: D1
+  notes: >
+    § 47. English text marked "Ausfertigung"; German original unconfirmed.
+    in_force_from precedes its own announcement window — contradiction in the
+    source, not a transcription error. Study plan table on p6 needs
+    find_tables(), not flat text.
+
+- id: D4
+  title: Module Handbook MSc Industrial Artificial Intelligence
+  version: "2025-04-07"
+  filename: Module_Handbook_MSc_IAI_0704.2025.pdf
+  sha256: 5636867922fa8e652d07602ada1e2c1d4d93c75909b4bf04702459a02b75cf9c
+  bytes: 758333
+  url: https://www.hs-albsig.de/fileadmin/user_upload/hsas/01_studienangebot/master/IAI/formular/Module_Handbook_MSc_IAI_0704.2025.pdf
+  retrieved: 2026-08-05
+  issued: 2025-04-07
+  applies_from: WS 2025/26
+  language: en
+  authority: descriptive
+  programme: iai
+  text_layer: native
+  pages: 26
+  exclude_sections: [3, 4]
+  notes: >
+    Not binding. Module IDs are XX0n0 placeholders and ambiguous across the two
+    module groups. Thesis prerequisite names WIW. Sections 3–4 (qualification
+    and competence matrices) excluded — no reliable row structure.

@@ -1,0 +1,152 @@
+# Routing table — where to send questions the regulations do not answer
+#
+# Used by the abstention path. A decline that says only "not covered" is half an
+# answer; it has to name where to go instead. In the baseline, both correct
+# declines named an office.
+#
+# This file helps the system route. It is never quoted back as regulatory fact.
+#
+# VERIFY BEFORE USE: contact details marked TODO were not confirmed against the
+# university website. The baseline invented "CAS/LSF" as the student portal when
+# the university uses HISinOne — plausible-sounding wrong specifics are exactly
+# what this file exists to prevent. Do not ship unverified values.
+
+- id: grades
+  topics: [grade, mark, result, transcript, Notenspiegel, exam result, ECTS earned]
+  office: Zentrales Prüfungsamt
+  system: HISinOne
+  note: Individual results are personal data and appear in no document.
+
+- id: registration_status
+  topics: [am I registered, exam registration, Anmeldung, deregister, Abmeldung]
+  office: Zentrales Prüfungsamt
+  system: HISinOne
+  note: >
+    The rules for registration ARE in D1 § 11 — answer those. Only a student's
+    own current status is out of scope.
+
+- id: timetable
+  topics: [timetable, schedule, lecture time, room, Stundenplan, when is my class]
+  system: WebUntis
+  office: Fakultät Engineering
+  note: TODO verify which timetable system the Faculty of Engineering uses.
+
+- id: exam_dates
+  topics: [exam date, Prüfungstermin, when is the exam, examination period]
+  office: Zentrales Prüfungsamt
+  note: >
+    D1 § 13 says periods are announced publicly at the start of each semester and
+    exact dates by the Prüfungsausschuss chair. Answer that; the specific dates
+    are not in the documents.
+
+- id: admission
+  topics: [admission, entry requirement, application, Zulassung, bachelor requirement, NC]
+  office: Studentische Abteilung
+  note: >
+    Admission requirements live in a separate Zulassungssatzung, not in the four
+    corpus documents.
+
+- id: enrolment
+  topics: [enrolment, matriculation, Immatrikulation, semester fee, Rückmeldung, leave semester]
+  office: Studentische Abteilung
+  note: >
+    D1 § 11 Abs. 1 covers what a leave semester means for examinations. The
+    procedure for taking one does not.
+
+- id: applications_to_board
+  topics: [extension, Nachteilsausgleich, retrospective withdrawal, annulment, second retake by oral exam]
+  office: Prüfungsausschuss
+  note: >
+    The grounds and deadlines ARE in D1 §§ 11a, 12 Abs. 2, 16 Abs. 1 and 21
+    Abs. 5. Answer those and route only for the form and submission.
+
+- id: recognition
+  topics: [recognition, credit transfer, Anerkennung, Anrechnung, studied abroad, prior learning]
+  office: Prüfungsausschuss
+  note: >
+    D1 § 19 covers the rules, including the four-week deadline (Abs. 5) and the
+    50% cap (Abs. 4a). Answer those; route for the individual decision.
+
+- id: thesis_admin
+  topics: [thesis registration, submit thesis, find supervisor, thesis topic, Anmeldung Master-Thesis]
+  office: Zentrales Prüfungsamt
+  secondary: Prüfungsausschuss
+  note: >
+    D1 § 21 Abs. 3 — the ZPA verifies prerequisites, then the supervising
+    professor issues the topic. If no supervisor can be found, the
+    Prüfungsausschuss chair arranges one (§ 21 Abs. 2 Satz 3).
+
+- id: module_choice
+  topics: [which elective, should I take, study planning, course advice, Wahlpflicht selection]
+  office: Studiendekan
+  contact: Prof. Dr. Lutz Sommer
+  email: sommer@hs-albsig.de
+  note: Source — D4 imprint, page 26.
+
+- id: module_content
+  topics: [what is taught, syllabus, literature, module content, lecturer]
+  office: Modulverantwortlicher
+  fallback: Studiendekan
+  note: >
+    D4 describes content for each module and is indexable — but it is
+    descriptive, not binding. Say so when answering from it.
+
+- id: international
+  topics: [visa, residence permit, Aufenthaltstitel, insurance, blocked account, arrival, housing]
+  office: International Office
+  note: >
+    The four documents make no distinction by nationality. § 19 Abs. 2 on
+    equivalence agreements concerns recognition of foreign qualifications, which
+    is a different question — the baseline conflated the two (E47).
+
+- id: careers
+  topics: [job, career, employment, internship search, werkstudent, CV, salary]
+  office: Career Center
+  note: >
+    D4's foreword discusses career fields, but it is descriptive prose, not a
+    rule. The baseline answered from it and was wrong to (E49).
+  todo: verify the Career Center exists under this name at HS Albstadt-Sigmaringen.
+
+- id: legal_challenge
+  topics: [appeal, Widerspruch, contest a grade, legal action, unfair]
+  office: Rektorat
+  route_via: Prüfungsausschuss
+  note: >
+    D1 § 18 Abs. 2 — one month to request review. § 7 Abs. 4 — objections in
+    study and examination matters are decided by the rectorate member responsible
+    for teaching. Answer those; route for the procedure.
+
+- id: disability_support
+  topics: [disability, chronic illness, accessibility, Behinderung, chronische Erkrankung]
+  office: Beauftragter für Studierende mit Behinderung
+  secondary: Prüfungsausschuss
+  note: >
+    D1 § 3 Abs. 6 Satz 4 gives the right to have this officer attend as an
+    adviser when an application is considered.
+  todo: find the current post-holder's name and contact details.
+
+- id: it_accounts
+  topics: [password, login, VPN, email account, ILIAS, portal access]
+  office: Rechenzentrum
+  todo: verify the IT support contact route.
+
+- id: personal_advice
+  topics: [will I pass, how should I study, is this hard, motivation, time management]
+  office: Studiendekan
+  note: >
+    Not a regulatory matter at all. Decline plainly rather than reaching for an
+    adjacent provision — that reach is what produced both of the baseline's false
+    answers.
+
+- id: fees_funding
+  topics: [tuition, scholarship, BAföG, funding, semester ticket]
+  office: Studentische Abteilung
+  todo: verify whether a separate funding advice office exists.
+
+- id: not_iai
+  topics: [other programme, different degree, bachelor rules, switch programme]
+  office: Studentische Abteilung
+  note: >
+    Scope is IAI only. D1 and D2 apply to all Master's programmes, so their rules
+    may still be answerable — but the special part for another programme is not
+    in the corpus.
