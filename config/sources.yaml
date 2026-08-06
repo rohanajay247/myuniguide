@@ -48,6 +48,7 @@
   pages: 6
   amends: D1
   heading_pattern: '^§\s*(\d+[a-z]?)\b\s*(?!bis\b)(.*)'
+  table_marker: "|"
   sentence_markers: true
   notes: >
     Only amendment to D1; no second exists. Replaces the § 12 exam list
