@@ -247,6 +247,101 @@ targetable:
   chunk; top-5 cannot supply nine. Either raise k for counting questions or
   document it as a limit.
 
+## Day 8 ablation — four configurations, the simplest won
+
+Every change was implemented, measured on all 50 questions, and kept or
+discarded on the number rather than on expectation.
+
+| Configuration                            | Type match | Recall@5  | Conflicts |
+| ---------------------------------------- | ---------- | --------- | --------- |
+| **dense k=5**                            | **42/50**  | **37/40** | **3/6**   |
+| hybrid k=5, equal-weight RRF             | 27/50      | 22/40     | 3/6       |
+| hybrid k=5, BM25 weighted 0.25           | 40/50      | 34/40     | 3/6       |
+| dense k=5 + binding/conflict prompt rule | 41/50      | 37/40     | 2/6       |
+
+**The original configuration was best.** Two standard improvements were built
+and rejected on measurement.
+
+### BM25 hurts on this corpus
+
+Implemented from scratch — IDF weighting, term-frequency saturation, length
+normalisation, and a tokeniser that keeps `2-010`, `12,5` and `§` intact where
+a standard one would destroy them.
+
+It works exactly as intended in isolation:
+
+```
+query           dense                  BM25
+"what is Pf"    0 of 3 chunks          3 of 3 chunks, ranks 1-3
+"2-020"         —                      exact hit, 6.77 vs 1.92 next
+"how long ...   correct at 0.742       no relevant result at all
+ for my thesis"
+```
+
+Opposite failure modes, which is the textbook argument for fusing them. On this
+corpus fusion made things worse.
+
+**Equal-weight RRF cost 15 percentage points.** Recall fell from 37/40 to 22/40
+and seventeen answer rows became declines — E07, E09, E10, E12–E14, E16–E19,
+E23, E39, E40, E44, E45. All of them natural-language lookups that dense handled
+correctly, where BM25 matched on _is_, _the_, _how_, _what_ and returned noise.
+RRF gives both systems equal say, so noise was weighted as heavily as signal.
+
+**Down-weighting BM25 to 0.25 recovered most of it** — 40/50, 34/40 — and
+produced one genuine win: E48 flipped to correct, because it needed D2 § 12's
+list, which dense never retrieved. But E09, E23 and E45 regressed, and the net
+still trailed dense alone.
+
+**The honest reading:** 191 chunks, and only two or three questions hinge on an
+identifier. The exact-match wins are real but rare; the noise is spread across
+everything else. BM25 would likely pay for itself on a larger corpus with more
+code-like queries. Not on this one.
+
+`bm25.py` and `hybrid()` are retained in the codebase as the ablation.
+
+### A prompt rule aimed at one row broke two others
+
+E28 fails because the model answers from D4 alone rather than reporting that it
+contradicts the binding D3. The obvious fix was to say so explicitly:
+
+> If a binding passage and a NOT binding passage state different facts about the
+> same thing, that is a CONFLICT, not an override.
+
+**It did not fix E28.** It broke E29, which stopped flagging, and made E50
+over-flag a straightforward answer as a conflict. Conflict detection fell from
+3/6 to 2/6.
+
+Teaching the model a rule to catch one case taught it to over-apply that rule.
+Reverted.
+
+### Determinism confirmed
+
+Reverting the prompt line reproduced the original run **exactly** — 42/50,
+37/40, 3/6, row for row. So at temperature 0 the system is deterministic across
+runs, and differences between configurations are signal rather than noise. Worth
+knowing before interpreting a two-point change as an improvement.
+
+### Conflict detection is stubborn at 3/6
+
+Four configurations, the same number every time. The three failures have
+different causes and none responded to retrieval or prompt changes:
+
+- **E25** — retrieval. The chunks linking `Pf` to Portfolioprüfung are split
+  across D2's annex (which says "Portfolioprüfung", never "Pf") and D3's study
+  plan (which says "Pf", never the full word). Neither alone is an answer.
+- **E28, E30** — the model resolves the disagreement instead of surfacing it.
+  The same instinct the long-context baseline showed at 0/6.
+
+Improving from 0/6 to 3/6 was the architectural gain. Getting past 3/6 appears
+to need something other than better retrieval or a better-worded rule.
+
+### Stopping here
+
+Four measured attempts, and the simplest configuration won. Further tuning
+against 50 questions would be fitting the hyperparameters to the test set.
+
+---
+
 ### Two scoring notes
 
 **E33 marked correct, with a caveat.** It declined and routed — but to

@@ -1,12 +1,13 @@
 """
 Generate a cited answer from retrieved chunks.
 
-Same model and same three response types as the long-context baseline, so the
-Day 7 comparison measures architecture rather than prompt quality. The only
-difference is five retrieved chunks instead of four whole PDFs.
+Same model, same three response types and same temperature as the long-context
+baseline, so the comparison measures architecture rather than prompt quality.
+The only difference is five retrieved chunks instead of four whole PDFs.
 
 Run from the project root:
     python pipeline/answer.py "how long do I have to write my thesis"
+    python pipeline/answer.py --dense "what does Pf stand for"
 """
 
 import os
@@ -16,7 +17,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from search import load_index, search      # same folder
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from search import load_index, search, hybrid
 
 load_dotenv()
 
@@ -68,15 +70,14 @@ def build_prompt(question, results):
     passages = []
     for score, chunk in results:
         label = "binding" if chunk["authority"] == "binding" else "NOT binding"
-        passages.append(
-            f"[{chunk['citation']} — {label}]\n{chunk['text']}"
-        )
+        passages.append(f"[{chunk['citation']} — {label}]\n{chunk['text']}")
     joined = "\n\n".join(passages)
     return f"PASSAGES:\n\n{joined}\n\nQUESTION: {question}"
 
 
-def answer(question, matrix, chunks, top_k=5):
-    results = search(question, matrix, chunks, top_k=top_k)
+def answer(question, matrix, chunks, top_k=5, retriever=search):
+    """retriever is switchable so the hybrid gain can be measured against dense."""
+    results = retriever(question, matrix, chunks, top_k=top_k)
     response = client.models.generate_content(
         model=MODEL,
         contents=build_prompt(question, results),
@@ -89,19 +90,24 @@ def answer(question, matrix, chunks, top_k=5):
 
 
 def main():
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    dense_only = "--dense" in args
+    if dense_only:
+        args.remove("--dense")
+    if not args:
         print(__doc__)
         raise SystemExit(1)
 
-    question = " ".join(sys.argv[1:])
+    question = " ".join(args)
     matrix, chunks = load_index()
-    text, results = answer(question, matrix, chunks)
+    text, results = answer(question, matrix, chunks,
+                           retriever=search if dense_only else hybrid)
 
-    print(f"\nQ: {question}\n")
+    print(f"\nQ: {question}   [{'dense' if dense_only else 'hybrid'}]\n")
     print(text)
     print("\n--- retrieved ---")
     for score, chunk in results:
-        print(f"  {score:.3f}  {chunk['citation']}")
+        print(f"  {score:.4f}  {chunk['citation']}")
 
 
 if __name__ == "__main__":

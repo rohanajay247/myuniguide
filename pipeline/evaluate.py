@@ -30,7 +30,10 @@ from answer import answer
 from search import load_index
 
 IN = "eval.csv"
-OUT = "data/eval_run.csv"
+# OUT = "data/eval_run.csv"
+# OUT = "data/eval_hybrid_k5.csv"
+# OUT = "data/eval_hybrid_weighted.csv"
+OUT =  "data/eval_dense_v3.csv"
 
 RE_OUTCOME = re.compile(r"^\s*(ANSWER|DECLINE|CONFLICT)\b", re.I)
 

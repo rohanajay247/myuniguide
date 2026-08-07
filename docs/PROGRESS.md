@@ -9,8 +9,8 @@ How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` fol
 | --------------------- | ----------------------------------------------------- |
 | Started               | 4 Aug 2026                                            |
 | Plan                  | 10 working days, ~62 h                                |
-| Days elapsed          | 7                                                     |
-| Phase                 | 3 complete — measured                                 |
+| Days elapsed          | 8                                                     |
+| Phase                 | 4 complete — depth measured, simplest config retained |
 | Pipeline code written | OCR, parsing, chunking, embedding, search, generation |
 
 ---
@@ -442,6 +442,59 @@ have been aimed at the prompt instead of at retrieval.
 
 **Next:** Day 8 — BM25 (targets E25, E48), retrieval diversity (E04, E28, E30),
 one change at a time with the eval re-run after each.
+
+---
+
+## Day 8 — 6 Aug · Depth features DONE
+
+**Done**
+
+- `pipeline/bm25.py` — BM25 written from scratch: IDF weighting, term-frequency
+  saturation, length normalisation, and a tokeniser that preserves `2-010`,
+  `12,5` and `§` where a standard one would destroy them
+- `hybrid()` in `search.py` — Reciprocal Rank Fusion of dense and sparse
+- Four configurations measured on all 50 questions
+
+**Result: the original configuration won.**
+
+| Configuration                        | Type match | Recall@5  | Conflicts |
+| ------------------------------------ | ---------- | --------- | --------- |
+| **dense k=5**                        | **42/50**  | **37/40** | **3/6**   |
+| hybrid, equal-weight RRF             | 27/50      | 22/40     | 3/6       |
+| hybrid, BM25 x 0.25                  | 40/50      | 34/40     | 3/6       |
+| dense + binding/conflict prompt rule | 41/50      | 37/40     | 2/6       |
+
+**Two standard improvements built and rejected on measurement.**
+
+**Learned**
+
+- **BM25 works exactly as designed and still hurts here.** In isolation it found
+  all three `Pf` chunks where dense found none, and hit `2-020` exactly. But
+  equal-weight fusion cost 15 points — seventeen natural-language lookups became
+  declines because BM25 matched on _is_, _the_, _how_ and RRF weighted that noise
+  as heavily as dense's signal. Down-weighting recovered most but still trailed.
+  With 191 chunks and only two or three identifier queries, the wins do not pay
+  for the noise.
+- **A prompt rule aimed at one row broke two others.** The binding/non-binding
+  conflict rule did not fix E28, broke E29, and made E50 over-flag. Teaching the
+  model a rule to catch one case taught it to over-apply it.
+- **The system is deterministic at temperature 0.** Reverting reproduced the
+  original run exactly, row for row — so configuration differences are signal,
+  not noise. Worth confirming before reading a two-point change as progress.
+- **Conflict detection is stuck at 3/6** across all four configurations. E25 is
+  retrieval (the `Pf` link is split across two chunks, neither of which contains
+  both halves); E28 and E30 are the model resolving instead of surfacing. Going
+  past 3/6 appears to need something other than better retrieval or better
+  wording.
+
+**Decided**
+
+Stop after four measured attempts. Further tuning against 50 questions would fit
+hyperparameters to the test set. `bm25.py` and `hybrid()` stay in the codebase
+as the ablation — the rejection is the interesting part.
+
+**Next:** Day 9 — deploy, or record a demo. Day 10 — `FAILURES.md` and the
+README.
 
 ---
 
