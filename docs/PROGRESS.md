@@ -9,9 +9,9 @@ How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` fol
 |---|---|
 | Started | 4 Aug 2026 |
 | Plan | 10 working days, ~62 h |
-| Days elapsed | 5 |
-| Phase | 3 — retrieval |
-| Pipeline code written | OCR, parsing, chunking, embedding, search |
+| Days elapsed | 6 |
+| Phase | 3 — retrieval; system answers end to end |
+| Pipeline code written | OCR, parsing, chunking, embedding, search, generation |
 
 ---
 
@@ -318,6 +318,71 @@ IDs, then Day 5's embedding.
 
 **Next:** Day 6 — generation. Chunks in, cited English answer out, plus the
 abstention and conflict paths. First point at which the system answers anything.
+
+---
+
+## Day 6 — 6 Aug · Generation DONE
+
+**Done**
+
+- `pipeline/answer.py` — retrieved chunks plus question to `gemini-3.6-flash`,
+  cited English answer out. **The system answers end to end for the first time.**
+- Same model, same three response types, same temperature as the baseline, so
+  the Day 7 comparison measures architecture rather than prompt quality.
+
+**Decided**
+
+- **Abstention lives in the prompt, not a threshold.** Day 5 proved no
+  separating score exists. The instruction says directly: passages merely ABOUT
+  a topic are not an answer.
+- **Override and conflict separated explicitly.** The baseline scored 0/6
+  because it resolved disagreements helpfully. An override is resolved by a rule
+  (D3 over D1 on thesis duration). A conflict has no rule that resolves it —
+  usually an error in the text.
+
+**First results — 3 of 6**
+
+| Question | Expected | Got |
+|---|---|---|
+| how long for my thesis | ANSWER 6 months | OK — D3 cited, D1 noted |
+| what grade did I get | DECLINE | OK — declined and routed |
+| what do I need before starting my thesis | CONFLICT | OK — both quoted, neither chosen |
+| do I have to defend my thesis | ANSWER no | DECLINE |
+| are exams written or coursework | ANSWER 11 types | DECLINE |
+| what does Pf stand for | ANSWER Portfolioprüfung | DECLINE |
+
+**The conflict case is the significant one.** On that exact question the
+baseline answered smoothly, dropping "WIW" and reporting a 50-ECTS threshold as
+if it applied to IAI. This system named the error and chose neither source. That
+is the measured gap closing.
+
+**All three failures are retrieval, not generation**
+
+```
+Q4  needed D3 Re § 3   retrieved 5x D1 § 23
+Q5  needed D2 § 12     retrieved D2 Anhang, D3 § 5, D3 § 12
+Q6  needed D2 Anhang   retrieved D1 § 31, D4 boilerplate
+```
+
+The model behaved correctly each time — declined on incomplete evidence rather
+than inventing. **All three are refusals, not wrong answers**, which is the
+recoverable direction for a regulations system. The baseline failed the other
+way twice.
+
+**Noted**
+
+- Retrieval concentration: Q4 returned five chunks from a single section,
+  crowding out the document that answers.
+- Absence-based reasoning may be structurally hard for retrieval. Q4's answer
+  follows from a rule that is *not there*; the baseline got it right because it
+  held all four documents. If this holds across the eval set: **long context
+  wins on absence, retrieval wins on conflict.**
+
+**Not fixed, deliberately.** Six hard questions say nothing about the other 44.
+Day 7 measures all 50 and separates recall@5 from accuracy.
+
+**Next:** Day 7 — run the full evaluation, compare against the 84% baseline,
+read every failure.
 
 ---
 

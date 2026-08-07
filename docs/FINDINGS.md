@@ -4,18 +4,18 @@ Running log of what the documents actually look like, established by
 extraction rather than assumption. Everything here was verified against
 PyMuPDF output, not guessed.
 
-Last updated: Day 5. Corpus parsed, chunked, embedded and searchable.
+Last updated: Day 6. System answers end to end; full evaluation pending.
 
 ---
 
 ## Status by document
 
-| ID | Document | Pages | Language | Text layer | Extracted |
-|----|----------|-------|----------|------------|-----------|
-| D1 | Master StuPO 22.1 (11.01.2022) | 20 | DE | native | yes — clean |
-| D2 | First Amendment (14.07.2022) | 6 | DE | scan + **bad embedded OCR** | yes — unusable as-is |
-| D3 | IAI Supplementary Statute 25.2 (28.02.2025) | 7 | **EN** | native | yes — clean |
-| D4 | Module Handbook (07.04.2025) | 26 | EN (+ some DE) | native | yes — clean |
+| ID  | Document                                    | Pages | Language       | Text layer                  | Extracted            |
+| --- | ------------------------------------------- | ----- | -------------- | --------------------------- | -------------------- |
+| D1  | Master StuPO 22.1 (11.01.2022)              | 20    | DE             | native                      | yes — clean          |
+| D2  | First Amendment (14.07.2022)                | 6     | DE             | scan + **bad embedded OCR** | yes — unusable as-is |
+| D3  | IAI Supplementary Statute 25.2 (28.02.2025) | 7     | **EN**         | native                      | yes — clean          |
+| D4  | Module Handbook (07.04.2025)                | 26    | EN (+ some DE) | native                      | yes — clean          |
 
 ---
 
@@ -26,7 +26,7 @@ regulations exist only in German — is wrong for the programme-specific
 document. Only D1 and D2 are German.
 
 - Open question: does a German original of D3 exist, and if so which
-  version is legally binding? The filename says *Ausfertigung* (official
+  version is legally binding? The filename says _Ausfertigung_ (official
   execution), which would imply the English text is binding. Unusual.
   → Prüfungsamt.
 
@@ -83,6 +83,7 @@ its ECTS value, per row:
 ```
 
 Three causes, none of them "a cell is legitimately empty":
+
 - row 1 merged code and name onto one line; row 2 split them
 - long module names wrap, adding a line to that row only
 - blank-line count doesn't track empty-cell count
@@ -114,7 +115,7 @@ Known couplings, both unenforced:
 
 - `parse_d2.py` parses the `===== PAGE n =====` separator written by
   `ocr_d2.py`. Change one and the other silently reports every record as page 1.
-- `index.npy` row *i* corresponds to `index.json` entry *i*. Reorder one alone
+- `index.npy` row _i_ corresponds to `index.json` entry _i_. Reorder one alone
   and every search result points at the wrong chunk. `search.py` asserts the
   lengths match, which catches truncation but not reordering.
 
@@ -173,7 +174,7 @@ if the chunker ever splits on line breaks.
 7` × 6, but absent from the table page. Strip before embedding — noise
 pollutes both vectors and BM25.
 
-**Printed page numbers restart.** D1's *Besonderer Teil* returns to page 1.
+**Printed page numbers restart.** D1's _Besonderer Teil_ returns to page 1.
 "Page 2" is ambiguous. Cite by PDF page index, not printed number.
 
 **The table of contents produces phantom sections.** A naive `^§ \d+`
@@ -182,6 +183,7 @@ regex matches §§ 32–43 in D1's TOC, but their text isn't in this PDF
 chunks that match queries and return nothing.
 
 **Section regex needs to handle:**
+
 - letter suffixes: `§ 11a`, `§ 33a`, `§ 38a`
 - double symbol: `§§ 32 bis 43`, `§§ 11 ff`
 - en-dash vs hyphen: § 16's title uses `–` in the body, `-` in the TOC
@@ -215,7 +217,7 @@ abbreviations the programme depends on are defined nowhere in binding text.
 *type* Portfolioprüfung is defined in binding text. Only the
 abbreviation `Pf` is undefined.] 2-020 (5), 2-030 (12.5), 1-030 (12.5) —
 exactly one third of the degree, under an abbreviation with no definition.
-The *exam type* Portfolioprüfung is defined, in D2, in German, inside the
+The _exam type_ Portfolioprüfung is defined, in D2, in German, inside the
 scanned document. The abbreviation-to-name link is what's missing.
 
 **D3's dates contradict each other, on the same page.** Article II: enters
@@ -240,7 +242,7 @@ governs you.
 ### D4 specifically
 
 **Module IDs are ambiguous, not merely unfilled.** `XX010` appears 8
-times and denotes *two different modules* — Digital Technology and
+times and denotes _two different modules_ — Digital Technology and
 Management, and Artificial Intelligence. Same for XX020, XX030, XX040.
 "What is XX010" has no answer. Real codes exist only in D3.
 
@@ -360,14 +362,14 @@ Actual:     2 3 4 1 2 1 2 1 1 1
 ```
 
 **Why the ambiguity doesn't matter.** Sentence numbers run sequentially
-within a paragraph, and Tesseract preserved every marker's *position*.
+within a paragraph, and Tesseract preserved every marker's _position_.
 The Nth marker in a paragraph is sentence N — the glyph doesn't need to
 be read at all. `?Dies` is 2nd -> ²Dies; `?Der` is 3rd -> ³Der;
 `*Alternativ` is 4th -> ⁴Alternativ.
 
 Caveat for Day 4: paragraphs cross page boundaries (page 2's first
 paragraph continues from page 1, so its sequence starts at 2). And D1
-§ 30 proves numbering is not *always* sequential — spot-check against
+§ 30 proves numbering is not _always_ sequential — spot-check against
 the page images.
 
 **`§` still fails in both**, but Tesseract's failure is mechanical:
@@ -404,13 +406,13 @@ D1 (2022-01)              D2 (2022-07)
                           11 Portfolioprüfung
 ```
 
-A cross-reference to "§ 12 Abs. 1 Satz 2 Nr. 4" means *Hausarbeiten*
-before July 2022 and *Referat* after. The sharpest amendment-application
+A cross-reference to "§ 12 Abs. 1 Satz 2 Nr. 4" means _Hausarbeiten_
+before July 2022 and _Referat_ after. The sharpest amendment-application
 case in the corpus, and a strong eval question.
 
 **Portfolioprüfung IS defined in binding text.** D2's new annex: a
 Prüfung combining several different examination elements into one
-overall result. Revises the earlier finding — the exam *type* is defined;
+overall result. Revises the earlier finding — the exam _type_ is defined;
 only the abbreviation `Pf` is not. Narrower, but more defensible.
 
 **The annex defines only 5 of its 11 types.** Mündliche Prüfung, Referat,
@@ -419,7 +421,7 @@ Praktische Arbeit, Laborarbeit and Hausarbeit are all `(nicht belegt)`.
 **D2 adds §§ 12a–12e** — five new sections on online examinations,
 covering video supervision, oral, open-book and written online formats.
 Note D1 § 12 Abs. 3 said online exams would be governed by the
-*Besonderer Teil*; D2 moves them into the general part instead.
+_Besonderer Teil_; D2 moves them into the general part instead.
 
 **D2 also amends § 12 Abs. 2** (Nachteilsausgleich extended to
 Mutterschutz, students with children, and caring responsibilities) and
@@ -471,8 +473,8 @@ is the design, not a defect.
 
 **This is good for the project.** A clean, self-consistent corpus would
 make retrieval trivial and the write-up boring. Real contradictions are
-what justify a third answer type — *"the documents disagree, here is
-where, ask the Prüfungsamt"* — alongside "answer" and "decline", and
+what justify a third answer type — _"the documents disagree, here is
+where, ask the Prüfungsamt"_ — alongside "answer" and "decline", and
 that is a more interesting system than one that only ever looks things
 up.
 
@@ -530,12 +532,12 @@ Three tests against the built index. Two overturned planned approaches.
 
 ### Cross-lingual retrieval works unaided
 
-| Query | Top result | Score |
-|---|---|---|
-| "how long do I have to write my thesis" | D3 § 21 (English) | 0.742 |
+| Query                                      | Top result        | Score |
+| ------------------------------------------ | ----------------- | ----- |
+| "how long do I have to write my thesis"    | D3 § 21 (English) | 0.742 |
 | "wie lange habe ich für die Master-Thesis" | D3 § 21 (English) | 0.752 |
 
-The German question scored *higher* on the English chunk than the English
+The German question scored _higher_ on the English chunk than the English
 question did. The glossary was budgeted for cross-lingual recall; vector search
 already handles it. It should still help BM25 — now a hypothesis to measure on
 Day 8 rather than an assumption.
@@ -577,7 +579,7 @@ Both thesis queries ranked `D1 § 23 Abs. 4` (thesis defence scheduling) third a
 catch it — § 23 is in D1, tagged `all`, because it does apply to programmes
 whose Special Part provides for a defence.
 
-Similarity cannot know a rule is *disapplied* elsewhere. Candidate for
+Similarity cannot know a rule is _disapplied_ elsewhere. Candidate for
 `FAILURES.md`.
 
 ---
@@ -587,15 +589,15 @@ Similarity cannot know a rule is *disapplied* elsewhere. Candidate for
 Seven times through OCR and parsing, a stage produced plausible output that was
 wrong in a specific way, and **none raised an error**:
 
-| Stage | Failure | Caught by |
-|---|---|---|
-| Flat table extraction | ECTS read from the wrong column | comparing distances across rows |
-| Tesseract | dropped a sentence marker entirely | counting markers against the source |
-| D1 parser | `§§ 32 bis 43` read as a section | looking at the section list |
-| D1 parser | § 44's text filed under § 31 | searching for a known provision |
-| D4 parser | 1 record from 26 pages | noticing the record count |
-| D2 parser | § 12 missing entirely | listing the sections found |
-| D2 parser | Portfolioprüfung merged with a page footer | searching for a known definition |
+| Stage                 | Failure                                    | Caught by                           |
+| --------------------- | ------------------------------------------ | ----------------------------------- |
+| Flat table extraction | ECTS read from the wrong column            | comparing distances across rows     |
+| Tesseract             | dropped a sentence marker entirely         | counting markers against the source |
+| D1 parser             | `§§ 32 bis 43` read as a section           | looking at the section list         |
+| D1 parser             | § 44's text filed under § 31               | searching for a known provision     |
+| D4 parser             | 1 record from 26 pages                     | noticing the record count           |
+| D2 parser             | § 12 missing entirely                      | listing the sections found          |
+| D2 parser             | Portfolioprüfung merged with a page footer | searching for a known definition    |
 
 Every one was found by checking a **specific known fact**. Automated checks tell
 you a stage ran; only known facts tell you it worked.
@@ -639,6 +641,6 @@ Full detail in `notes.md`.
 
 Daily task log lives in `PROGRESS.md`, in this same `docs/` folder.
 
-This file records what the *documents* contain and how they behave.
-`PROGRESS.md` records what was *done* and when. Keeping them apart stops
+This file records what the _documents_ contain and how they behave.
+`PROGRESS.md` records what was _done_ and when. Keeping them apart stops
 this file turning into a diary.

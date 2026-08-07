@@ -980,7 +980,115 @@ prompt has to handle it, and it is a strong candidate for `FAILURES.md`.
 
 ---
 
-## Step 9 — The evaluation set
+## Step 9 — Generate cited answers
+
+Same model as the baseline (`gemini-3.6-flash`), same three response types,
+same temperature. The only difference is **five retrieved chunks instead of four
+whole PDFs**. Holding everything else constant is what makes the Day 7
+comparison measure architecture rather than prompt quality.
+
+### Two things this prompt must do that the baseline's did not
+
+**Abstention has to be explicit.** Day 5 killed the score-threshold plan, so the
+instruction says directly: passages that are merely _about_ the same topic are
+not an answer. That targets the exact measured failure — "what grade did I get
+in Data Science" retrieves Data Science chunks that do not contain the grade.
+
+**Override and conflict have to be separated.** The baseline scored 0/6 on
+conflicts because its instruction said "the statutes govern" and it obeyed,
+helpfully producing one clean answer instead of reporting the disagreement. Two
+situations look similar and are not:
+
+|              | Example                                                        | Correct response                     |
+| ------------ | -------------------------------------------------------------- | ------------------------------------ |
+| **Override** | D1 allows four to six months; D3 states six                    | ANSWER six months, note D1           |
+| **Conflict** | D4 gives a thesis prerequisite for a different programme (WIW) | CONFLICT, quote both, choose neither |
+
+An override is resolved by a rule. A conflict has no rule that resolves it —
+typically an error in the text, or two statements that cannot both be true.
+
+### The prompt
+
+```
+Begin every response with one of three words in capitals.
+
+ANSWER  - the passages answer the question. Answer and cite.
+DECLINE - the passages do not answer the question. Say so and name the
+          office to contact. Passages merely ABOUT the same topic are not
+          an answer. Personal data (a grade, a timetable, a registration
+          status) is in no document, so DECLINE.
+CONFLICT - the passages contradict each other about the same thing. Say
+          so, quote both, and do not choose between them.
+```
+
+Each passage is labelled with its citation and whether it is binding:
+
+```python
+f"[{chunk['citation']} — {label}]\n{chunk['text']}"
+```
+
+### First results — six questions
+
+| Question                                 | Expected                | Got                                   |      |
+| ---------------------------------------- | ----------------------- | ------------------------------------- | ---- |
+| how long for my thesis                   | ANSWER 6 months         | ANSWER 6 months, D3 cited, D1 noted   | OK   |
+| what grade did I get in Data Science     | DECLINE                 | DECLINE + routed                      | OK   |
+| what do I need before starting my thesis | CONFLICT                | CONFLICT, both quoted, neither chosen | OK   |
+| do I have to defend my thesis            | ANSWER no               | DECLINE                               | fail |
+| are exams written or coursework          | ANSWER 11 types         | DECLINE                               | fail |
+| what does Pf stand for                   | ANSWER Portfolioprüfung | DECLINE                               | fail |
+
+**The conflict case is the significant one.** On that exact question the
+baseline answered smoothly, dropping "WIW" and reporting the 50-ECTS threshold
+as if it applied to IAI. This system named the error, quoted both sources and
+chose neither. That is the measured gap closing.
+
+### All three failures are retrieval, not generation
+
+```
+Q4  needed D3 Re § 3     retrieved 5x D1 § 23
+Q5  needed D2 § 12       retrieved D2 Anhang, D3 § 5, D3 § 12
+Q6  needed D2 Anhang     retrieved D1 § 31, D4 boilerplate
+```
+
+In every case the generation model behaved correctly on incomplete evidence —
+it declined rather than inventing. The right chunk was simply not in the top
+five.
+
+**All three failures are refusals, not wrong answers.** For a system about
+examination regulations that is the recoverable direction: "ask the Prüfungsamt"
+costs a student a query, a confident wrong thesis deadline costs them more. The
+baseline failed in the other direction twice.
+
+Two mechanisms, both already on the Day 8 list:
+
+- **Low-semantic tokens.** `Pf`, `2-010`, `12,5` carry nothing to embed. BM25
+  matches literal strings. Q6 is a clean before/after test.
+- **Retrieval concentration.** Q4 returned five chunks from one section. When a
+  topic has many similar chunks they crowd out the one from a different document
+  that actually answers. Fixes: retrieve more, cap chunks per section, or force
+  document diversity.
+
+### Absence-based reasoning may be structurally hard for retrieval
+
+Q4 asks whether a thesis defence is required. The answer is no, and it follows
+from D3 listing only module examinations and the thesis — a rule that is _not
+there_. The baseline got this right (E14) because it held all four documents.
+Retrieval sees five chunks, and the rule that is absent cannot be retrieved.
+
+If this holds across the eval set it is a real finding: **long context wins on
+absence, retrieval wins on conflict.**
+
+### Not fixed yet, deliberately
+
+Six questions chosen because they were hard say nothing about the other 44.
+Tuning on six examples is how you overfit to six examples. Day 7 measures all 50
+and separates recall@5 from accuracy, which is what tells retrieval failures
+apart from generation failures.
+
+---
+
+## Step 10 — The evaluation set
 
 **50 questions with known answers, written before any pipeline code.** This is
 the gate: without it, no claim about the system is falsifiable.
@@ -1013,7 +1121,7 @@ biased in its favour. Corrections after that point would not be legitimate.
 
 ---
 
-## Step 10 — The long-context baseline
+## Step 11 — The long-context baseline
 
 **Deliberately low-tech: no code.** It runs once, and reading fifty raw responses
 by hand teaches you what the failure modes look like.
