@@ -5,12 +5,12 @@ Daily record of what was done. Brief by design.
 Findings live in `FINDINGS.md`. Plan lives in `WBS_10day_v4.md`.
 How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` folder.
 
-| | |
-|---|---|
-| Started | 4 Aug 2026 |
-| Plan | 10 working days, ~62 h |
-| Days elapsed | 6 |
-| Phase | 3 — retrieval; system answers end to end |
+|                       |                                                       |
+| --------------------- | ----------------------------------------------------- |
+| Started               | 4 Aug 2026                                            |
+| Plan                  | 10 working days, ~62 h                                |
+| Days elapsed          | 7                                                     |
+| Phase                 | 3 complete — measured                                 |
 | Pipeline code written | OCR, parsing, chunking, embedding, search, generation |
 
 ---
@@ -29,7 +29,7 @@ How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` fol
 **Decided**
 
 - D1, D3, D4 extract cleanly with PyMuPDF — no OCR needed
-- D2 is a scan carrying a *bad embedded OCR layer* — needs re-OCR, not first OCR
+- D2 is a scan carrying a _bad embedded OCR layer_ — needs re-OCR, not first OCR
 - `get_text("dict")` required later, to recover superscripts and indentation
 - `find_tables()` required for D3's study plan
 - Never strip a hyphen at end of line when joining wrapped text
@@ -157,7 +157,7 @@ should not try. The target is the 0/6 on conflict detection.
 
 **Noted while writing them**
 
-- `§` is *section*; `Absatz` is *paragraph*. Translating `§` as "paragraph"
+- `§` is _section_; `Absatz` is _paragraph_. Translating `§` as "paragraph"
   yields citations that look right and point to the wrong level.
 - `Verteidigung` appears 30 times in D1 and applies to IAI **not at all**
   (D3 Re § 3 Para. 1). Term frequency is not relevance — a retrieval system
@@ -245,12 +245,12 @@ d3_studyplan.jsonl    9
 
 **Hit — seven silent failures, none of which errored**
 
-| Failure | Caught by |
-|---|---|
-| `§§ 32 bis 43` read as a section | looking at the section list |
-| § 44's text filed under § 31 | searching for a known provision |
-| D4: 1 record from 26 pages | noticing the record count |
-| D2: § 12 missing entirely | listing the sections found |
+| Failure                                   | Caught by                        |
+| ----------------------------------------- | -------------------------------- |
+| `§§ 32 bis 43` read as a section          | looking at the section list      |
+| § 44's text filed under § 31              | searching for a known provision  |
+| D4: 1 record from 26 pages                | noticing the record count        |
+| D2: § 12 missing entirely                 | listing the sections found       |
 | D2: Portfolioprüfung merged with a footer | searching for a known definition |
 
 § 44 is the cohort rule and § 12 is the amendment's central change — both would
@@ -342,14 +342,14 @@ abstention and conflict paths. First point at which the system answers anything.
 
 **First results — 3 of 6**
 
-| Question | Expected | Got |
-|---|---|---|
-| how long for my thesis | ANSWER 6 months | OK — D3 cited, D1 noted |
-| what grade did I get | DECLINE | OK — declined and routed |
-| what do I need before starting my thesis | CONFLICT | OK — both quoted, neither chosen |
-| do I have to defend my thesis | ANSWER no | DECLINE |
-| are exams written or coursework | ANSWER 11 types | DECLINE |
-| what does Pf stand for | ANSWER Portfolioprüfung | DECLINE |
+| Question                                 | Expected                | Got                              |
+| ---------------------------------------- | ----------------------- | -------------------------------- |
+| how long for my thesis                   | ANSWER 6 months         | OK — D3 cited, D1 noted          |
+| what grade did I get                     | DECLINE                 | OK — declined and routed         |
+| what do I need before starting my thesis | CONFLICT                | OK — both quoted, neither chosen |
+| do I have to defend my thesis            | ANSWER no               | DECLINE                          |
+| are exams written or coursework          | ANSWER 11 types         | DECLINE                          |
+| what does Pf stand for                   | ANSWER Portfolioprüfung | DECLINE                          |
 
 **The conflict case is the significant one.** On that exact question the
 baseline answered smoothly, dropping "WIW" and reporting a 50-ECTS threshold as
@@ -374,7 +374,7 @@ way twice.
 - Retrieval concentration: Q4 returned five chunks from a single section,
   crowding out the document that answers.
 - Absence-based reasoning may be structurally hard for retrieval. Q4's answer
-  follows from a rule that is *not there*; the baseline got it right because it
+  follows from a rule that is _not there_; the baseline got it right because it
   held all four documents. If this holds across the eval set: **long context
   wins on absence, retrieval wins on conflict.**
 
@@ -386,16 +386,75 @@ read every failure.
 
 ---
 
+## Day 7 — 6 Aug · Measure DONE
+
+**Done**
+
+- `pipeline/evaluate.py` — runs all 50 questions, records the response, the
+  retrieved citations and a recall flag
+- All 50 scored by hand against the rules in `notes.md`
+
+**Result: 42/50 — 84%. Identical to the baseline, opposite failure profile.**
+
+```
+                 Baseline    Retrieval v1
+Overall           42/50        42/50
+Lookup            33/33        30/34
+Declines           9/11         9/10
+Conflicts          0/6          3/6
+False answers      2/11         1/10
+Recall@5           n/a         37/40
+```
+
+**Four lookups traded for three conflicts, and the false-answer rate halved.**
+That trade is the project's result — at 59 pages the two approaches score the
+same, and what differs is what each is blind to.
+
+**Hit — a metric that would have misled the whole of Day 8**
+
+`recall_hit` originally matched on document ID alone, so "D3 retrieved" counted
+as a hit when the wrong provision within D3 came back. It reported near-perfect
+recall on a smoke test where two of five rows had failed on retrieval. Tightened
+to check the section before the full run. Under the loose metric, Day 8 would
+have been aimed at the prompt instead of at retrieval.
+
+**Failures, by mechanism**
+
+- **Recall misses (E05, E30, E48)** — right provision absent from the top five.
+  E05 got § 21 Abs. 8 (thesis retake) rather than § 16 (module retake).
+- **Precision (E04, E28)** — right document, wrong provision. E28 answered from
+  D4 alone because the binding D3 rows were not surfaced, so the conflict was
+  invisible.
+- **Low-semantic token (E25)** — `Pf` retrieved neither chunk containing it.
+- **Structural (E01)** — "how many subjects" needs all 9 study-plan chunks;
+  top-5 returns 5. Aggregation is not fixable by better ranking.
+- **False answer (E47)** — answered from § 19 Abs. 2 on equivalence agreements.
+  **The baseline failed this same row the same way.**
+
+**Learned**
+
+- Recall@5 at 37/40 means retrieval mostly works. The failures cluster in named
+  mechanisms rather than general weakness, which is what makes Day 8 targetable
+  rather than speculative.
+- The model declined correctly in every case where it lacked evidence. All
+  retrieval failures surfaced as refusals, not as wrong answers — the
+  recoverable direction for a regulations system.
+
+**Next:** Day 8 — BM25 (targets E25, E48), retrieval diversity (E04, E28, E30),
+one change at a time with the eval re-run after each.
+
+---
+
 ## Open risks
 
-| Risk | Status |
-|---|---|
-| Paragraphs cross page boundaries — positional renumbering will silently mis-number D2 if it assumes every paragraph starts at 1 | open, hits Day 4 |
-| Table extraction returns wrong values without erroring | open, hits Day 4 |
-| Long-context baseline may beat retrieval at 59 pages | expected; publish either way |
-| First project of five in 45 days — no schedule slack | ongoing |
+| Risk                                                                                                                            | Status                       |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Paragraphs cross page boundaries — positional renumbering will silently mis-number D2 if it assumes every paragraph starts at 1 | open, hits Day 4             |
+| Table extraction returns wrong values without erroring                                                                          | open, hits Day 4             |
+| Long-context baseline may beat retrieval at 59 pages                                                                            | expected; publish either way |
+| First project of five in 45 days — no schedule slack                                                                            | ongoing                      |
 
-**Pattern worth noting:** nearly every risk here is *silently wrong output*,
+**Pattern worth noting:** nearly every risk here is _silently wrong output_,
 not a crash. Spot-checking against the source PDFs is the only defence.
 
 ---

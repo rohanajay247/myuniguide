@@ -16,7 +16,7 @@ silently.
 ### The three outcomes
 
 Every question in `eval.csv` expects one of three outcomes. A response is
-scored against the outcome the question expects; producing the right *kind* of
+scored against the outcome the question expects; producing the right _kind_ of
 response is part of being correct.
 
 **`answer` — correct if all three hold:**
@@ -27,7 +27,7 @@ response is part of being correct.
    — the citation is the product, not decoration.
 3. It does not assert anything false alongside the correct part.
 
-*Partial credit does not exist.* A response that gets the fact right and the
+_Partial credit does not exist._ A response that gets the fact right and the
 citation wrong scores zero. This is deliberate: for a legal-document system, a
 plausible-looking wrong citation is worse than no answer, because the reader
 cannot tell it is wrong without doing the work themselves.
@@ -53,15 +53,15 @@ university itself has left open.
 
 ### Metrics recorded per run
 
-| Metric | Definition |
-|---|---|
-| **Accuracy** | correct responses / 50 |
-| **Answer accuracy** | correct / 33 `answer` rows |
-| **Abstention accuracy** | correct / 11 `decline` rows |
-| **Conflict detection** | correct / 6 `conflict` rows |
-| **Recall@5** | share of `answer` rows where the correct chunk is in the top five retrieved |
-| **False answer rate** | `decline` rows answered anyway — **the number that matters most** |
-| **Latency** | median seconds per question |
+| Metric                  | Definition                                                                  |
+| ----------------------- | --------------------------------------------------------------------------- |
+| **Accuracy**            | correct responses / 50                                                      |
+| **Answer accuracy**     | correct / 33 `answer` rows                                                  |
+| **Abstention accuracy** | correct / 11 `decline` rows                                                 |
+| **Conflict detection**  | correct / 6 `conflict` rows                                                 |
+| **Recall@5**            | share of `answer` rows where the correct chunk is in the top five retrieved |
+| **False answer rate**   | `decline` rows answered anyway — **the number that matters most**           |
+| **Latency**             | median seconds per question                                                 |
 
 **False answer rate is the safety metric.** A system that answers a question
 about someone's grades, or invents an admission requirement, is worse than one
@@ -120,13 +120,13 @@ Scored by hand against the rules above.
 
 ### Result: 42/50 — 84%
 
-| Category | Score | Rate |
-|---|---|---|
-| Lookup (`answer` rows) | 33/33 | **100%** |
-| Declines | 9/11 | 82% |
-| **Conflicts** | **0/6** | **0%** |
-| False answer rate | 2/11 | 18% |
-| **Overall** | **42/50** | **84%** |
+| Category               | Score     | Rate     |
+| ---------------------- | --------- | -------- |
+| Lookup (`answer` rows) | 33/33     | **100%** |
+| Declines               | 9/11      | 82%      |
+| **Conflicts**          | **0/6**   | **0%**   |
+| False answer rate      | 2/11      | 18%      |
+| **Overall**            | **42/50** | **84%**  |
 
 ### What it is good at
 
@@ -146,14 +146,14 @@ Perfect on lookup. That includes cases designed to be hard:
 
 **Zero for six on conflict detection.** Not marginal — every single one.
 
-| Row | Failure |
-|---|---|
-| E25 | Stated `Pf` = Portfolioprüfung flatly, as though defined in binding text |
-| E26 | Noticed D4's `XX020`, then *resolved* the conflict instead of flagging it |
+| Row | Failure                                                                                              |
+| --- | ---------------------------------------------------------------------------------------------------- |
+| E25 | Stated `Pf` = Portfolioprüfung flatly, as though defined in binding text                             |
+| E26 | Noticed D4's `XX020`, then _resolved_ the conflict instead of flagging it                            |
 | E27 | Dropped "WIW" from D4's thesis prerequisite — reported the 50-ECTS threshold as if it applied to IAI |
-| E28 | Answered from D3, never mentioned D4 disagrees |
-| E29 | Gave 01.03.2025 without noting the announcement window began 03.03.2025 |
-| E30 | Said the general StuPO applies, without noting § 1 omits IAI |
+| E28 | Answered from D3, never mentioned D4 disagrees                                                       |
+| E29 | Gave 01.03.2025 without noting the announcement window began 03.03.2025                              |
+| E30 | Said the general StuPO applies, without noting § 1 omits IAI                                         |
 
 **Partial cause, disclosed:** the system instruction contained a precedence rule
 ("where D4 conflicts with the statutes, the statutes govern"). E26 in particular
@@ -167,10 +167,10 @@ missing an omission in a scope clause.
 
 ### Two false answers
 
-| Row | Failure |
-|---|---|
+| Row | Failure                                                                                                                                                                                                                                                                |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | E47 | Answered "special rules for international students" from § 19 Abs. 2/5 (equivalence agreements, foreign coursework recognition). Defensible but not what was asked — the regulations make no distinction by nationality. Borderline row; marked 0, flagged as arguable |
-| E49 | Answered a careers question from D4's foreword — descriptive marketing prose, not a rule. Inconsistent with E34, where it cited D4's elective list and still declined |
+| E49 | Answered a careers question from D4's foreword — descriptive marketing prose, not a rule. Inconsistent with E34, where it cited D4's elective list and still declined                                                                                                  |
 
 Both failures share a shape: **the corpus contained adjacent text, and it used
 that text instead of declining.**
@@ -206,12 +206,82 @@ before any retrieval system existed, so nothing could be biased in its favour.
 
 ## Accuracy history
 
-| Run | Date | Change made | Accuracy | Recall@5 | False answers | Delta |
-|-----|------|-------------|----------|----------|---------------|-------|
+| Run                   | Date  | Accuracy    | Lookup | Declines | Conflicts | False answers | Recall@5 |
+| --------------------- | ----- | ----------- | ------ | -------- | --------- | ------------- | -------- |
+| Long-context baseline | 6 Aug | 42/50 · 84% | 33/33  | 9/11     | **0/6**   | 2/11          | n/a      |
+| Retrieval v1          | 6 Aug | 42/50 · 84% | 30/34  | 9/10     | **3/6**   | 1/10          | 37/40    |
+
+### Retrieval v1 — same score, inverted failure profile
+
+Identical headline number, opposite composition. Four lookups traded for three
+conflicts, and the false-answer rate halved.
+
+**This is the result the project was built to test.** At 59 pages, long context
+and retrieval score the same; what differs is _what each is blind to_.
+
+> Long context is perfect at lookup and cannot report that its sources
+> disagree. Retrieval loses some lookup accuracy and gains the ability to
+> surface contradictions.
+
+### The eight failures, by mechanism
+
+| Row | Failure                                                                             | Mechanism                                   |
+| --- | ----------------------------------------------------------------------------------- | ------------------------------------------- |
+| E05 | got § 21 Abs. 8 (thesis retake) instead of § 16 (module retake)                     | recall miss — semantic near-neighbour       |
+| E30 | D1 § 1 never retrieved, so the omission of IAI was invisible                        | recall miss                                 |
+| E48 | D2's annex retrieved but not the § 12 list it defines                               | recall miss                                 |
+| E04 | retrieved § 12 Abs. 2, not § 11a; declined                                          | precision — right document, wrong provision |
+| E28 | answered from D4 alone; binding D3 rows not surfaced, so the conflict was invisible | precision                                   |
+| E25 | `Pf` retrieved neither chunk containing the string                                  | low-semantic token                          |
+| E01 | "how many subjects" needs all 9 study-plan chunks; top-5 returns 5                  | **structural — aggregation**                |
+| E47 | answered from § 19 Abs. 2 (equivalence agreements)                                  | false answer — same row the baseline failed |
+
+**Recall@5 is 37/40.** Retrieval mostly works. The failures are concentrated in
+named mechanisms rather than general weakness, which is what makes Day 8
+targetable:
+
+- **BM25** → E25, E48. Literal token matching for `Pf`, `§ 12`, `2-010`.
+- **Retrieval diversity** → E04, E28, E30. All three failed because five chunks
+  came from one place, crowding out the document that answered.
+- **E01 is not fixable this way.** Aggregation questions need every relevant
+  chunk; top-5 cannot supply nine. Either raise k for counting questions or
+  document it as a limit.
+
+### Two scoring notes
+
+**E33 marked correct, with a caveat.** It declined and routed — but to
+"LSF/Stine", a plausible-sounding system the university does not use (it uses
+WebUntis). Valid decline under the rules; the same gap-filling habit that
+produced "CAS/LSF" in the baseline.
+
+**E04 scores 0 but is not a judgement failure.** Given the chunks it received
+(§ 12 Abs. 2, long-term illness), declining was correct. The failure is upstream.
+
+### What did not change
+
+Both systems failed E47 the same way. Both reached for adjacent text rather than
+declining. That is a property of the question or the corpus, not of the
+architecture.
 
 ---
 
 ## Decisions
+
+**2026-08-06 — Retrieval v1 matches the baseline at 84% with an inverted
+failure profile.** Lookup 33/33 → 30/34; conflicts 0/6 → 3/6; false answers
+2/11 → 1/10. Four lookups traded for three conflicts. The trade is the result,
+not the score.
+
+**2026-08-06 — `recall_hit` tightened mid-run to check section, not just
+document.** Matching on document ID alone over-reported badly: "D3 retrieved"
+counted as a hit when the wrong provision within D3 came back. Under the loose
+metric recall looked near-perfect and would have pointed Day 8 at the prompt
+instead of at retrieval. Fixed before the full 50-question run.
+
+**2026-08-06 — E04 expected answer corrected.** The original expected `decline`,
+assuming acute same-day illness required a medical certificate. D1 § 11a Abs. 1
+allows withdrawal by non-attendance with no reasons at all. Corrected before any
+retrieval system existed, so nothing could be biased in its favour.
 
 **2026-08-05 — Tesseract over the embedded OCR layer for D2.** Correct on every
 known-damaged token; found 10 sentence markers to the embedded layer's 8. Its
