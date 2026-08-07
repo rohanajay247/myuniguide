@@ -2,49 +2,49 @@
 
 ## IAI StuPO Assistant
 
-*English-language access to the examination regulations governing the IAI Master's programme*
+_English-language access to the examination regulations governing the IAI Master's programme_
 
-**Version 0.9 · 6 August 2026**
+**Version 0.10 · 6 August 2026**
 
 Owner: Rohan
 Hochschule Albstadt-Sigmaringen
 M.Sc. Industrial Artificial Intelligence · Cohort SS 2026
 
-*Status: Evaluation set written, baseline measured at 84%. Ready to build ingestion.*
+_Status: Evaluation set written, baseline measured at 84%. Ready to build ingestion._
 
 ---
 
 ### Changes from v0.8
 
-| # | Change | Why |
-|---|--------|-----|
-| 1 | **Success criteria rewritten around the measured baseline.** | Long context scored 100% on lookup and 0% on conflict detection. Beating it on lookup is not a realistic or interesting goal. |
-| 2 | **Conflict detection promoted to the project's primary claim.** | It is the only measured gap, and it is where the amendment and authority work lands. |
-| 3 | Model fixed: Gemini 3.6 Flash for baseline and all generation. | Changing models mid-project confounds every accuracy delta. |
-| 4 | Model cost/accuracy comparison added as a Day 9 deliverable. | The eval set makes this measurable rather than a guess. |
+| #   | Change                                                          | Why                                                                                                                           |
+| --- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Success criteria rewritten around the measured baseline.**    | Long context scored 100% on lookup and 0% on conflict detection. Beating it on lookup is not a realistic or interesting goal. |
+| 2   | **Conflict detection promoted to the project's primary claim.** | It is the only measured gap, and it is where the amendment and authority work lands.                                          |
+| 3   | Model fixed: Gemini 3.6 Flash for baseline and all generation.  | Changing models mid-project confounds every accuracy delta.                                                                   |
+| 4   | Model cost/accuracy comparison added as a Day 9 deliverable.    | The eval set makes this measurable rather than a guess.                                                                       |
 
 ### Changes from v0.7
 
-| # | Change | Why |
-|---|--------|-----|
-| 1 | **Multi-programme design constraints added** (see *Designing for expansion*). | Half the corpus is already shared across all 12 Master programmes. Three cheap decisions now avoid a rebuild later. |
-| 2 | **OCR decision resolved: Tesseract.** | Beat the embedded layer on every damaged token. Gemini Vision not needed. |
-| 3 | **Corpus confirmed complete.** Master General Section stops at 22.1; exactly one amendment; IAI special part at 25.2. | Verified against the Rechtsgrundlagen index. |
-| 4 | Prüfungsamt question 6 (further amendments) closed. | No second Master amendment exists. |
+| #   | Change                                                                                                                | Why                                                                                                                 |
+| --- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Multi-programme design constraints added** (see _Designing for expansion_).                                         | Half the corpus is already shared across all 12 Master programmes. Three cheap decisions now avoid a rebuild later. |
+| 2   | **OCR decision resolved: Tesseract.**                                                                                 | Beat the embedded layer on every damaged token. Gemini Vision not needed.                                           |
+| 3   | **Corpus confirmed complete.** Master General Section stops at 22.1; exactly one amendment; IAI special part at 25.2. | Verified against the Rechtsgrundlagen index.                                                                        |
+| 4   | Prüfungsamt question 6 (further amendments) closed.                                                                   | No second Master amendment exists.                                                                                  |
 
 ### Changes from v0.6
 
 Everything below was established by extracting and reading the documents, not by assumption. Full detail in `docs/FINDINGS.md`.
 
-| # | Change | Why |
-|---|--------|-----|
-| 1 | **D3 is in English, not German.** The framing "the regulations exist only in German" is wrong for the programme-specific statute. | Verified in extraction. Only D1 and D2 are German. |
-| 2 | **D2 is a scan *with* a bad embedded OCR layer**, not a scan with no text. | PyMuPDF returns 13,625 characters of damaged German. Fails silently rather than loudly. |
-| 3 | **Amendment renumbering added as a first-class requirement.** | D2 doesn't append to § 12's list, it reorders it. Position 4 means different things before and after July 2022. |
-| 4 | **Table extraction added as a required capability.** | D3's study plan is the single highest-value page in the corpus and flat text extraction destroys its column alignment. |
-| 5 | **"The documents contradict each other" promoted to a designed answer type.** | ~20 catalogued source defects and conflicts make this a routine outcome, not an edge case. |
-| 6 | **`Pf` finding narrowed.** Portfolioprüfung *is* defined in binding text (D2 annex). Only the abbreviation is undefined. | Narrower claim, but defensible. |
-| 7 | Baseline resequenced to precede OCR work. | Day 3 previously depended on Day 4's output. |
+| #   | Change                                                                                                                            | Why                                                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | **D3 is in English, not German.** The framing "the regulations exist only in German" is wrong for the programme-specific statute. | Verified in extraction. Only D1 and D2 are German.                                                                     |
+| 2   | **D2 is a scan _with_ a bad embedded OCR layer**, not a scan with no text.                                                        | PyMuPDF returns 13,625 characters of damaged German. Fails silently rather than loudly.                                |
+| 3   | **Amendment renumbering added as a first-class requirement.**                                                                     | D2 doesn't append to § 12's list, it reorders it. Position 4 means different things before and after July 2022.        |
+| 4   | **Table extraction added as a required capability.**                                                                              | D3's study plan is the single highest-value page in the corpus and flat text extraction destroys its column alignment. |
+| 5   | **"The documents contradict each other" promoted to a designed answer type.**                                                     | ~20 catalogued source defects and conflicts make this a routine outcome, not an edge case.                             |
+| 6   | **`Pf` finding narrowed.** Portfolioprüfung _is_ defined in binding text (D2 annex). Only the abbreviation is undefined.          | Narrower claim, but defensible.                                                                                        |
+| 7   | Baseline resequenced to precede OCR work.                                                                                         | Day 3 previously depended on Day 4's output.                                                                           |
 
 ---
 
@@ -54,7 +54,7 @@ A question-answering system over the examination regulations for the IAI Master'
 
 A student asks a question in English. The system finds the governing provision, answers in English, shows the original text with a section reference, and links the source PDF.
 
-**The language gap is real but narrower than v0.6 stated.** The programme-specific statute (D3) and the module handbook (D4) are in English. The *base rulebook* — which contains most of the rules a student actually needs, on registration, retakes, grading, deadlines and the thesis — exists only in German, as does the amendment that modifies it. So roughly two thirds of the binding text governing an English-taught international cohort is inaccessible to most of that cohort.
+**The language gap is real but narrower than v0.6 stated.** The programme-specific statute (D3) and the module handbook (D4) are in English. The _base rulebook_ — which contains most of the rules a student actually needs, on registration, retakes, grading, deadlines and the thesis — exists only in German, as does the amendment that modifies it. So roughly two thirds of the binding text governing an English-taught international cohort is inaccessible to most of that cohort.
 
 **What an answer looks like:**
 
@@ -62,7 +62,7 @@ A student asks a question in English. The system finds the governing provision, 
 > **A:** Six months. If you're delayed for reasons outside your control, the first examiner can extend it by up to two months.
 > Source: IAI Supplementary Statute 25.2, Re § 21 Para. 5 → [PDF]
 
-*(§ is the section symbol used in German law. "§ 21" means Section 21.)*
+_(§ is the section symbol used in German law. "§ 21" means Section 21.)_
 
 ---
 
@@ -96,7 +96,7 @@ Everything is cached by content hash, so re-running after a small change only re
 
 Retrieved chunks then pass through a rules layer before generation: amendments are applied over base text, out-of-cohort chunks are filtered, binding documents outrank the Module Handbook where they disagree.
 
-Finally the system checks whether it retrieved anything good enough, and branches three ways — answer, decline, or flag a conflict. That branch is the important one: a confident wrong answer about an exam deadline is worse than no answer.
+Finally the system branches three ways — answer, decline, or flag a conflict. **This is a judgement made by the generation model, not a similarity threshold.** Measured on Day 5: an answerable question scored 0.742, an unanswerable one 0.666, and pure boilerplate 0.617. No separating line exists, because similarity cannot distinguish text that is _about_ a topic from text that _answers_ the question. That branch is the important one: a confident wrong answer about an exam deadline is worse than no answer.
 
 ---
 
@@ -106,13 +106,13 @@ Each of these is required by how the documents are actually put together, not ch
 
 **Combining documents.** The current rule is rarely in one place. D3 modifies D1; D2 modifies it too. "What happens if I fail a module exam?" needs three of the four at once.
 
-**Applying amendments, including renumbering.** D2 does not append to § 12's list of examination types — it replaces it, and the order changes. `Nr. 4` was *Hausarbeiten* before July 2022 and *Referat* after. A system that returns the pre-amendment text, or that treats the amendment as additive, gives a wrong answer that looks right.
+**Applying amendments, including renumbering.** D2 does not append to § 12's list of examination types — it replaces it, and the order changes. `Nr. 4` was _Hausarbeiten_ before July 2022 and _Referat_ after. A system that returns the pre-amendment text, or that treats the amendment as additive, gives a wrong answer that looks right.
 
 **Following references.** D1 repeatedly says "the Special Part governs the details" without giving them. The system has to follow that pointer into D3 rather than stopping.
 
 **Knowing which source wins.** Where D4 and the binding documents disagree — and they do, on module codes and on which semester the elective modules fall in — the binding document is correct. The system applies that rule and names the source it used.
 
-**Reading the study plan as a table.** D3 page 6 answers most real student questions — ECTS per module, semester, examination type, teaching language — and nothing else does. Flat text extraction destroys its column alignment in a way that produces *silently wrong* values rather than errors. Structural table extraction is required, not optional.
+**Reading the study plan as a table.** D3 page 6 answers most real student questions — ECTS per module, semester, examination type, teaching language — and nothing else does. Flat text extraction destroys its column alignment in a way that produces _silently wrong_ values rather than errors. Structural table extraction is required, not optional.
 
 **Cohort filtering.** D1 § 44: students are governed by the version in force when they started. The right answer depends on enrolment date. This is written into the regulation itself.
 
@@ -122,9 +122,9 @@ Each of these is required by how the documents are actually put together, not ch
 
 **Knowing when to stop — and when to say the documents disagree.** Three outcomes, not two:
 
-- *Answer* — the documents support a clear response, cited.
-- *Decline* — the documents don't cover it; route to the right office.
-- *Conflict* — the documents contradict each other. Name both sources, quote both, and point to the Prüfungsamt. Do not pick a side.
+- _Answer_ — the documents support a clear response, cited.
+- _Decline_ — the documents don't cover it; route to the right office.
+- _Conflict_ — the documents contradict each other. Name both sources, quote both, and point to the Prüfungsamt. Do not pick a side.
 
 The third outcome was an afterthought in v0.6. It is now a designed feature, because the corpus contains around twenty documented defects and contradictions and a student hitting one deserves to be told so.
 
@@ -157,7 +157,7 @@ to retrofit:
 
 1. **Every chunk carries a `programme` field** — `all` for D1/D2, `iai` for
    D3/D4. Query-time filter keeps chunks where `programme in ("all",
-   current_programme)`. Roughly five lines in the search function; adding it
+current_programme)`. Roughly five lines in the search function; adding it
    later means re-embedding the corpus.
 2. **"IAI" never appears in prompts or code, only in data.** The programme is a
    parameter. The glossary and routing table are keyed by topic, not written
@@ -195,15 +195,15 @@ The real reason is that none of the hard parts above exist in any framework. App
 
 Gemini 3.6 Flash, four PDFs uploaded directly, 50 questions, scored by hand:
 
-| Category | Baseline |
-|---|---|
-| Lookup | **33/33 — 100%** |
-| Declines | 9/11 — 82% |
-| **Conflicts** | **0/6 — 0%** |
-| Overall | 42/50 — 84% |
+| Category      | Baseline         |
+| ------------- | ---------------- |
+| Lookup        | **33/33 — 100%** |
+| Declines      | 9/11 — 82%       |
+| **Conflicts** | **0/6 — 0%**     |
+| Overall       | 42/50 — 84%      |
 
 Long context is perfect at finding and combining provisions. It applied D3's
-override of D1 on thesis duration, reasoned from the *absence* of a provision to
+override of D1 on thesis duration, reasoned from the _absence_ of a provision to
 conclude there is no oral examination, and read the scanned amendment through
 vision — sidestepping the entire OCR problem this pipeline has to solve.
 
@@ -248,6 +248,7 @@ projects pick a model by intuition, this one picks it with evidence.
 **Tools.** Python 3.12, PyMuPDF, numpy, PyYAML, pandas, FastAPI, Docker. Tesseract with German language data for D2.
 
 **PDF-specific knowledge established on Day 1:**
+
 - `get_text("dict")` rather than `get_text()`, to recover font size and position — needed to distinguish superscript sentence numbers from ordinary digits, and to recover indentation
 - `find_tables()` for the study plan page
 - never strip a hyphen at end of line when joining wrapped text
@@ -282,23 +283,23 @@ projects pick a model by intuition, this one picks it with evidence.
 
 The corpus (indexed, not republished), a manifest listing every document with source URL and fingerprint, the 50-question evaluation set, a German↔English glossary, a routing table mapping topics to offices, `docs/FINDINGS.md`, a notes file with baseline and accuracy history, the pipeline code, and a README covering method, results and failures.
 
-**One rule about content:** the system only ever indexes official documents. The glossary and routing table are things I wrote — they help the system *find* and *route*, but nothing I wrote is ever quoted back as an answer. When student services content is added later it gets fetched from university pages with URL and date recorded, never summarised.
+**One rule about content:** the system only ever indexes official documents. The glossary and routing table are things I wrote — they help the system _find_ and _route_, but nothing I wrote is ever quoted back as an answer. When student services content is added later it gets fetched from university pages with URL and date recorded, never summarised.
 
 ---
 
 ## Risks
 
-**The embedded OCR layer in D2 looks plausible but is wrong.** It produces readable German with zero `§` symbols and destroyed sentence numbering, and nothing errors. *Resolved:* Tesseract on 300 dpi renders beats it on every damaged token. Its own failures are systematic glyph substitutions (`!`→¹, `*`→⁴, `[&8]`→`§`) recoverable by position and regex. Residual risk: paragraphs cross page boundaries, so positional renumbering must not assume every paragraph starts at 1.
+**The embedded OCR layer in D2 looks plausible but is wrong.** It produces readable German with zero `§` symbols and destroyed sentence numbering, and nothing errors. _Resolved:_ Tesseract on 300 dpi renders beats it on every damaged token. Its own failures are systematic glyph substitutions (`!`→¹, `*`→⁴, `[&8]`→`§`) recoverable by position and regex. Residual risk: paragraphs cross page boundaries, so positional renumbering must not assume every paragraph starts at 1.
 
-**Table extraction fails silently.** Position-counting on the study plan returns `4` where `5` belongs, with no error. *Mitigation:* structural extraction via `find_tables()`, spot-checked row by row against the PDF.
+**Table extraction fails silently.** Position-counting on the study plan returns `4` where `5` belongs, with no error. _Mitigation:_ structural extraction via `find_tables()`, spot-checked row by row against the PDF.
 
-**The baseline may beat retrieval.** *Mitigation:* publish it, then expand the corpus.
+**The baseline may beat retrieval.** _Mitigation:_ publish it, then expand the corpus.
 
-**Scope creep back toward covering everything.** *Mitigation:* a document only gets added if it makes an evaluation question answerable.
+**Scope creep back toward covering everything.** _Mitigation:_ a document only gets added if it makes an evaluation question answerable.
 
-**A public endpoint burns API quota.** *Mitigation:* per-IP rate limits, daily cap, hard spend limit at the provider.
+**A public endpoint burns API quota.** _Mitigation:_ per-IP rate limits, daily cap, hard spend limit at the provider.
 
-**Mistaken for an official university service.** *Mitigation:* clear disclaimer, no university logo, no lookalike domain, always link the source.
+**Mistaken for an official university service.** _Mitigation:_ clear disclaimer, no university logo, no lookalike domain, always link the source.
 
 ---
 
@@ -308,7 +309,7 @@ Resolved: whether D2 needs OCR (yes — and it ships with a bad one), whether th
 
 Open, for the Prüfungsamt and Studiendekan:
 
-1. Is there a German original of D3, and which language version is legally binding? The filename says *Ausfertigung*, implying the English text is the executed version — unusual.
+1. Is there a German original of D3, and which language version is legally binding? The filename says _Ausfertigung_, implying the English text is the executed version — unusual.
 2. What does `Pf` stand for, and where is it defined for IAI? It covers 30 of 90 ECTS.
 3. D4's thesis prerequisite names the wrong programme (WIW, not IAI) and cites a 50-ECTS threshold that appears nowhere in binding text. Error?
 4. D3's entry-into-force date (01.03.2025) precedes its own announcement window (03.03–17.03.2025). Which date applies?

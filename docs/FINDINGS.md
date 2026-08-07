@@ -4,7 +4,7 @@ Running log of what the documents actually look like, established by
 extraction rather than assumption. Everything here was verified against
 PyMuPDF output, not guessed.
 
-Last updated: Day 4. All four documents parsed into addressable records.
+Last updated: Day 5. Corpus parsed, chunked, embedded and searchable.
 
 ---
 
@@ -110,9 +110,18 @@ Verified against these four documents; not claimed as universal.
 - Per-document facts (`heading_pattern`, `layout`, `sentence_markers`,
   `table_marker`) live in `config/sources.yaml`; structural rules live in code
 
-Known coupling: `parse_d2.py` parses the `===== PAGE n =====` separator written
-by `ocr_d2.py`. Nothing enforces that convention — change one and the other
-silently reports every record as page 1.
+Known couplings, both unenforced:
+
+- `parse_d2.py` parses the `===== PAGE n =====` separator written by
+  `ocr_d2.py`. Change one and the other silently reports every record as page 1.
+- `index.npy` row *i* corresponds to `index.json` entry *i*. Reorder one alone
+  and every search result points at the wrong chunk. `search.py` asserts the
+  lengths match, which catches truncation but not reordering.
+
+Chunking assumption: sentences are grouped by paragraph, so the retrieval unit
+is a whole Absatz. 15 chunks exceed 1,500 characters, all D4 pages — an
+embedding is fixed-size regardless of input length, so those average into a
+point that represents nothing sharply.
 
 ### Line-break hyphenation — do not strip the hyphen
 
@@ -512,6 +521,64 @@ promotes three findings from suspected to confirmed:
 
 The binding definition of Portfolioprüfung is now retrievable as a standalone
 record (`D2 Anhang`), which is what the `Pf` finding depends on.
+
+---
+
+## Measured results that changed the design (Day 5)
+
+Three tests against the built index. Two overturned planned approaches.
+
+### Cross-lingual retrieval works unaided
+
+| Query | Top result | Score |
+|---|---|---|
+| "how long do I have to write my thesis" | D3 § 21 (English) | 0.742 |
+| "wie lange habe ich für die Master-Thesis" | D3 § 21 (English) | 0.752 |
+
+The German question scored *higher* on the English chunk than the English
+question did. The glossary was budgeted for cross-lingual recall; vector search
+already handles it. It should still help BM25 — now a hypothesis to measure on
+Day 8 rather than an assumption.
+
+### Score thresholds cannot drive abstention
+
+```
+answerable    ("how long for my thesis")           0.742
+unanswerable  ("what grade did I get")             0.666
+boilerplate   ("9 Module coordinator(s): ...")     0.617
+```
+
+No separating line exists. At 0.68 you reject a good match; at 0.60 you accept
+boilerplate.
+
+The cause: "what grade did I get in Data Science" contains "Data Science", and
+chunks about Data Science exist. Retrieval is behaving correctly — those are the
+most similar chunks. **Similarity cannot distinguish "text about this topic
+exists" from "this question is answerable from these documents."**
+
+Same failure the long-context baseline showed at 2/11 on declines. The BRD
+budgeted abstention as a score floor; that is measurably wrong, and abstention
+moves into the generation prompt as a judgement.
+
+### Vector search fails on low-semantic tokens
+
+Query `"what is Pf"` retrieved **neither** chunk containing the string — not
+`D2 Anhang` (the Portfolioprüfung definition) nor `D3 study plan 2-020`
+(`Pf (5)`). Top five spanned 0.594 to 0.567, a spread narrow enough to be
+arbitrary.
+
+Two characters carry almost nothing to embed. This is the concrete case for
+BM25: `Pf`, `2-010`, `12,5`, `XX020`, `§ 12a`.
+
+### A limit retrieval cannot fix
+
+Both thesis queries ranked `D1 § 23 Abs. 4` (thesis defence scheduling) third at
+~0.72. **D3 removes the defence entirely for IAI.** The programme filter cannot
+catch it — § 23 is in D1, tagged `all`, because it does apply to programmes
+whose Special Part provides for a defence.
+
+Similarity cannot know a rule is *disapplied* elsewhere. Candidate for
+`FAILURES.md`.
 
 ---
 

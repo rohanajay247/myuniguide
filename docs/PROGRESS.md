@@ -5,13 +5,13 @@ Daily record of what was done. Brief by design.
 Findings live in `FINDINGS.md`. Plan lives in `WBS_10day_v4.md`.
 How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` folder.
 
-|                       |                                    |
-| --------------------- | ---------------------------------- |
-| Started               | 4 Aug 2026                         |
-| Plan                  | 10 working days, ~62 h             |
-| Days elapsed          | 4                                  |
-| Phase                 | 2 — ingestion                      |
-| Pipeline code written | OCR + parsing (all four documents) |
+| | |
+|---|---|
+| Started | 4 Aug 2026 |
+| Plan | 10 working days, ~62 h |
+| Days elapsed | 5 |
+| Phase | 3 — retrieval |
+| Pipeline code written | OCR, parsing, chunking, embedding, search |
 
 ---
 
@@ -29,7 +29,7 @@ How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` fol
 **Decided**
 
 - D1, D3, D4 extract cleanly with PyMuPDF — no OCR needed
-- D2 is a scan carrying a _bad embedded OCR layer_ — needs re-OCR, not first OCR
+- D2 is a scan carrying a *bad embedded OCR layer* — needs re-OCR, not first OCR
 - `get_text("dict")` required later, to recover superscripts and indentation
 - `find_tables()` required for D3's study plan
 - Never strip a hyphen at end of line when joining wrapped text
@@ -157,7 +157,7 @@ should not try. The target is the 0/6 on conflict detection.
 
 **Noted while writing them**
 
-- `§` is _section_; `Absatz` is _paragraph_. Translating `§` as "paragraph"
+- `§` is *section*; `Absatz` is *paragraph*. Translating `§` as "paragraph"
   yields citations that look right and point to the wrong level.
 - `Verteidigung` appears 30 times in D1 and applies to IAI **not at all**
   (D3 Re § 3 Para. 1). Term frequency is not relevance — a retrieval system
@@ -245,12 +245,12 @@ d3_studyplan.jsonl    9
 
 **Hit — seven silent failures, none of which errored**
 
-| Failure                                   | Caught by                        |
-| ----------------------------------------- | -------------------------------- |
-| `§§ 32 bis 43` read as a section          | looking at the section list      |
-| § 44's text filed under § 31              | searching for a known provision  |
-| D4: 1 record from 26 pages                | noticing the record count        |
-| D2: § 12 missing entirely                 | listing the sections found       |
+| Failure | Caught by |
+|---|---|
+| `§§ 32 bis 43` read as a section | looking at the section list |
+| § 44's text filed under § 31 | searching for a known provision |
+| D4: 1 record from 26 pages | noticing the record count |
+| D2: § 12 missing entirely | listing the sections found |
 | D2: Portfolioprüfung merged with a footer | searching for a known definition |
 
 § 44 is the cohort rule and § 12 is the amendment's central change — both would
@@ -275,16 +275,62 @@ IDs, then Day 5's embedding.
 
 ---
 
+## Day 5 — 6 Aug · Chunking, embedding, search DONE
+
+**Done**
+
+- `pipeline/chunk.py` — 418 records grouped by paragraph into **191 chunks**,
+  each with a citation string (`D1 § 21 Abs. 5 Saetze 1-7`)
+- `pipeline/embed.py` — 191 x 768 index, normalised, **573 KB**, cached by
+  content hash
+- `pipeline/search.py` — cosine search in three lines, with the programme filter
+
+**Decided**
+
+- **Group by paragraph, not by sentence.** A lone sentence often lacks its
+  subject — "Sie ist innerhalb von vier bis sechs Monaten zu bearbeiten" never
+  says "thesis". Precision moves into the citation instead.
+- **`gemini-embedding-001` at 768 dimensions.** GA over the preview
+  `gemini-embedding-2`; the numbers have to be reproducible. Multimodal buys
+  nothing for a text corpus.
+- **Normalise at index time**, so cosine similarity reduces to a dot product and
+  search is one matrix multiplication.
+- **No vector database.** 573 KB is not a database problem.
+
+**Measured — two results overturned planned approaches**
+
+- **Cross-lingual retrieval works unaided.** German query scored 0.752 on the
+  English chunk; English scored 0.742. The glossary drops in priority.
+- **Score thresholds cannot drive abstention.** Answerable 0.742, unanswerable
+  0.666, boilerplate 0.617 — no separating line. The BRD budgeted a score floor;
+  abstention moves into the Day 6 prompt as a judgement instead.
+- **Vector search fails on "what is Pf"** — retrieved neither chunk containing
+  the string. Two characters carry nothing to embed. Concrete case for BM25,
+  with a before/after test ready for Day 8.
+
+**Noted**
+
+- `D1 § 23` (thesis defence) ranks third on thesis queries, but D3 removes the
+  defence entirely for IAI. Similarity cannot know a rule is disapplied
+  elsewhere — the prompt must handle it. Candidate for `FAILURES.md`.
+- 15 chunks exceed 1,500 characters, all D4 pages. Fixed-size embeddings blur
+  long, multi-topic text.
+
+**Next:** Day 6 — generation. Chunks in, cited English answer out, plus the
+abstention and conflict paths. First point at which the system answers anything.
+
+---
+
 ## Open risks
 
-| Risk                                                                                                                            | Status                       |
-| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Paragraphs cross page boundaries — positional renumbering will silently mis-number D2 if it assumes every paragraph starts at 1 | open, hits Day 4             |
-| Table extraction returns wrong values without erroring                                                                          | open, hits Day 4             |
-| Long-context baseline may beat retrieval at 59 pages                                                                            | expected; publish either way |
-| First project of five in 45 days — no schedule slack                                                                            | ongoing                      |
+| Risk | Status |
+|---|---|
+| Paragraphs cross page boundaries — positional renumbering will silently mis-number D2 if it assumes every paragraph starts at 1 | open, hits Day 4 |
+| Table extraction returns wrong values without erroring | open, hits Day 4 |
+| Long-context baseline may beat retrieval at 59 pages | expected; publish either way |
+| First project of five in 45 days — no schedule slack | ongoing |
 
-**Pattern worth noting:** nearly every risk here is _silently wrong output_,
+**Pattern worth noting:** nearly every risk here is *silently wrong output*,
 not a crash. Spot-checking against the source PDFs is the only defence.
 
 ---

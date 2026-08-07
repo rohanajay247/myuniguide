@@ -726,7 +726,261 @@ against page count, § 12 and Anhang present, nine modules totalling 90 ECTS.
 
 ---
 
-## Step 7 — The evaluation set
+## Step 7 — Chunk the records
+
+Parsed records are one sentence each, which is too fine for retrieval. A lone
+sentence often lacks the subject it refers to:
+
+```
+"Sie ist innerhalb von vier bis sechs Monaten zu bearbeiten."
+```
+
+_Sie_ is the Master's thesis, but the word "thesis" is not in the text. A
+search for "how long for my thesis" will not match it, and even if it did the
+result would be unreadable.
+
+**So group by paragraph.** All seven sentences of § 21 Abs. 5 become one chunk,
+and precision moves into the citation, which records the sentence range.
+
+```python
+def group_key(r):
+    return (r["doc"], r.get("section"), r.get("paragraph"), r.get("page"))
+```
+
+That tuple is the single most consequential line in the file — it defines the
+retrieval unit.
+
+Two exceptions: D4 is already page-level, and the nine study plan rows stay
+individual because each is already a complete statement.
+
+Citations are built at chunk time, since that string is what the answer
+displays: `D1 § 21 Abs. 5 Sätze 1–7`. Chunks below 40 characters are dropped —
+a chunk reading `"a)"` is noise in the index.
+
+### Result
+
+```
+d1_parsed  271 records -> 120 chunks
+d2_parsed   73 records ->  27 chunks
+d3_parsed   41 records ->  14 chunks
+d4_parsed   24 records ->  21 chunks
+studyplan    9 rows    ->   9 chunks
+                          191 chunks
+
+chars: p10 98, p50 318, p90 1169, max 2791
+```
+
+**Known weakness:** 15 chunks exceed 1,500 characters, all D4 pages. An
+embedding is a fixed-size vector regardless of input length, so a 2,800-character
+page covering workload, learning outcomes, contents, literature and examination
+form averages into one point that represents nothing sharply. Accepted — D4 is
+non-binding — but a likely entry in `FAILURES.md`.
+
+---
+
+## Step 8 — Embed and search
+
+### The idea
+
+An embedding model reads text and returns 768 numbers. Text with similar meaning
+produces similar numbers. Finding relevant text therefore becomes finding nearby
+points — and it works across languages, because meaning is what gets encoded,
+not vocabulary.
+
+Two different models are involved in this project and they do unrelated jobs:
+
+| Model                  | Job                                                            |
+| ---------------------- | -------------------------------------------------------------- |
+| `gemini-embedding-001` | converts text to numbers. Cannot read or write.                |
+| `gemini-3.6-flash`     | reads and writes. Used for the baseline and for Day 6 answers. |
+
+### Model choice
+
+`gemini-embedding-001` (GA) over `gemini-embedding-2` (public preview since
+March 2026). Same reasoning as choosing 3.6 Flash over 3.1 Pro — the numbers
+have to be reproducible, and multimodal buys nothing for a text corpus.
+
+768 dimensions rather than the default 3072. 191 × 768 floats is 573 KB, and
+Google recommends 768 as near-peak quality at a quarter of the storage.
+
+### Building the index
+
+```python
+response = client.models.embed_content(
+    model="gemini-embedding-001",
+    contents=texts,
+    config=types.EmbedContentConfig(
+        task_type="RETRIEVAL_DOCUMENT",
+        output_dimensionality=768,
+    ),
+)
+```
+
+**Normalise manually.** `gemini-embedding-001` only returns L2-normalised
+vectors at the default 3072 dimensions; truncated output does not come
+normalised.
+
+```python
+norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+matrix = matrix / norms
+```
+
+Normalising scales every vector to length 1 — direction preserved, magnitude
+discarded, since only direction carries meaning. Cosine similarity is normally
+`(a·b) / (|a|·|b|)`; with both lengths 1 the denominator vanishes and it reduces
+to a dot product. **That moves work to index time, once, instead of paying it on
+every query.**
+
+A check catches failure, because a wrong normalisation would silently corrupt
+every score:
+
+```python
+lengths = np.linalg.norm(matrix, axis=1)
+if not np.allclose(lengths, 1.0, atol=1e-4):
+    print("  WARNING: rows are not unit length")
+```
+
+**Caching by content hash.** The vector is stored under a hash of the text, so
+editing one chunk re-embeds only that chunk. No timestamps, no invalidation
+logic — the hash _is_ the identity of the text.
+
+### Three output files, three purposes
+
+```
+chunks.jsonl        source of truth — what you would re-run from
+embed_cache.json    speed optimisation — safe to delete
+index.npy + .json   what search loads at startup
+```
+
+`index.npy` row _i_ corresponds to `index.json` entry _i_. **Nothing enforces
+that.** Reorder one alone and every result points at the wrong chunk, silently —
+the same class of coupling as the page separator shared between `ocr_d2.py` and
+`parse_d2.py`. `search.py` asserts the lengths match, which catches the crude
+version of the failure but not a reordering.
+
+### Searching
+
+The whole search is three lines:
+
+```python
+scores = matrix @ query              # (191, 768) @ (768,) -> (191,)
+order = np.argsort(scores)[::-1][:5]
+return [chunks[i] for i in order]
+```
+
+One matrix multiplication compares the question against all 191 chunks at once.
+No loop, no vector database — 573 KB is not a database problem.
+
+**Different task types for the two sides:**
+
+```python
+task_type="RETRIEVAL_DOCUMENT"   # indexing
+task_type="RETRIEVAL_QUERY"      # searching
+```
+
+A question and its answer rarely share vocabulary — _"how long do I have?"_ vs
+_"Die Bearbeitungszeit beträgt sechs Monate"_ — so the model places queries near
+the documents that answer them, asymmetrically. Using the same type for both
+degrades retrieval with no visible error.
+
+**The programme filter** is four lines and is the entire multi-programme
+mechanism:
+
+```python
+for i, chunk in enumerate(chunks):
+    if chunk["programme"] not in ("all", programme):
+        scores[i] = -1.0
+```
+
+D1 and D2 are tagged `all`; D3 and D4 are `iai`. Adding another programme
+changes data, not code.
+
+---
+
+## What testing the index revealed
+
+Three measured results, two of which changed the design.
+
+### Cross-lingual retrieval works unaided
+
+| Query                                      | Top result        | Score |
+| ------------------------------------------ | ----------------- | ----- |
+| "how long do I have to write my thesis"    | D3 § 21 (English) | 0.742 |
+| "wie lange habe ich für die Master-Thesis" | D3 § 21 (English) | 0.752 |
+
+The German question scored _higher_ on the English chunk than the English
+question did, and its top four were all relevant where English had an irrelevant
+chunk at rank 4.
+
+**Consequence:** the glossary drops in priority. It was budgeted for
+cross-lingual recall, which vector search already handles. It should still help
+BM25, which does care about language — but that is now a hypothesis to measure
+on Day 8, not an assumption.
+
+### Score thresholds cannot drive abstention — design change
+
+```
+answerable question ("how long for my thesis")      0.742
+unanswerable question ("what grade did I get")      0.666
+pure boilerplate ("9 Module coordinator(s): ...")   0.617
+```
+
+**No separating line exists.** At 0.68 you reject the thesis question's
+second-best match; at 0.60 you accept module boilerplate as an answer.
+
+Why: "what grade did I get in Data Science" contains "Data Science", and chunks
+about Data Science exist. Retrieval is working correctly — those genuinely are
+the most similar chunks. But similarity cannot distinguish _"text about this
+topic exists"_ from _"this question is answerable from these documents."_
+
+This is the same failure the long-context baseline showed at 2/11 on declines:
+it answered E47 and E49 by reaching for adjacent text.
+
+**The BRD budgeted abstention as a score floor. That is now measurably wrong.**
+Abstention moves into the generation prompt on Day 6 as a judgement — _do these
+passages answer the question, or are they merely about the same topic?_
+
+Also means recall@5 stops being a proxy for correctness on decline rows: the
+right chunks can be retrieved and the right answer still be a refusal.
+
+### Vector search fails on low-semantic tokens — the BM25 case
+
+Query `"what is Pf"`:
+
+```
+1. 0.594  D1 § 31    (the abbreviations section — but it does not define Pf)
+2. 0.583  D4         (project documentation, irrelevant)
+...
+5. 0.567  D1 § 14    (grading)
+```
+
+**Neither chunk containing the string was retrieved** — not `D2 Anhang` with the
+Portfolioprüfung definition, not `D3 study plan 2-020` with `Pf (5)`.
+
+Two characters carry almost nothing to embed, so the vector drifts toward chunks
+_about abbreviations in general_. Note the spread: 0.594 to 0.567 across five
+results means the ranking is close to arbitrary, where the thesis query had rank
+1 standing 0.05 clear.
+
+This is a measured argument for hybrid retrieval rather than a stated one. On
+Day 8, re-run this exact query after adding BM25 and record the before/after.
+Targets: `Pf`, `2-010`, `12,5`, `XX020`, `§ 12a`.
+
+### A limit retrieval cannot fix
+
+Both thesis queries put `D1 § 23 Abs. 4` — thesis defence scheduling — at rank
+3, scoring ~0.72. **D3 removes the defence entirely for IAI.**
+
+The programme filter cannot catch this: § 23 lives in D1, tagged `all`, because
+it genuinely applies to programmes whose Special Part provides for a defence.
+Yours does not.
+
+Similarity cannot know that a rule is _disapplied_ by another document. Day 6's
+prompt has to handle it, and it is a strong candidate for `FAILURES.md`.
+
+---
+
+## Step 9 — The evaluation set
 
 **50 questions with known answers, written before any pipeline code.** This is
 the gate: without it, no claim about the system is falsifiable.
@@ -759,7 +1013,7 @@ biased in its favour. Corrections after that point would not be legitimate.
 
 ---
 
-## Step 8 — The long-context baseline
+## Step 10 — The long-context baseline
 
 **Deliberately low-tech: no code.** It runs once, and reading fifty raw responses
 by hand teaches you what the failure modes look like.
