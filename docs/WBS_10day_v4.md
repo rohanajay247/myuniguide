@@ -2,7 +2,7 @@
 
 ## IAI StuPO Assistant
 
-*10-day build plan · revision 4*
+_10-day build plan · revision 4_
 
 **10 working days · ~62 hours · 6 August 2026**
 
@@ -10,7 +10,7 @@ Owner: Rohan
 Hochschule Albstadt-Sigmaringen
 M.Sc. Industrial Artificial Intelligence · Cohort SS 2026
 
-*Companion to BRD v0.9*
+_Companion to BRD v0.9_
 
 ---
 
@@ -35,8 +35,8 @@ conflict detection ≥ 5/6 while holding lookup ≥ 28/33.
 remaining carryover is `sources.yaml` alone.
 
 **Day 4 and Day 5 gain the `programme` metadata field**, so multi-programme
-expansion doesn't require re-embedding later (BRD v0.8, *Designing for
-expansion*).
+expansion doesn't require re-embedding later (BRD v0.8, _Designing for
+expansion_).
 
 **Day 2 gains a `programme` column in `eval.csv`.**
 
@@ -54,15 +54,15 @@ expansion*).
 
 ## Day 1 — Setup and parsing verdict · ✅ COMPLETE
 
-| Task | Status |
-|------|--------|
-| Environment: Python 3.12, venv, PyMuPDF | done |
-| Repo folders `data/raw`, `pipeline` | done |
-| Extract all four PDFs to `data/d*_raw.txt` | done |
-| Read and inventory every document | done |
-| Parsing verdict per document | done |
-| `sources.yaml` | **moved to Day 2** |
-| OCR comparison for D2 | **moved to Day 2** |
+| Task                                       | Status             |
+| ------------------------------------------ | ------------------ |
+| Environment: Python 3.12, venv, PyMuPDF    | done               |
+| Repo folders `data/raw`, `pipeline`        | done               |
+| Extract all four PDFs to `data/d*_raw.txt` | done               |
+| Read and inventory every document          | done               |
+| Parsing verdict per document               | done               |
+| `sources.yaml`                             | **moved to Day 2** |
+| OCR comparison for D2                      | **moved to Day 2** |
 
 **Verdict reached:** D1, D3 and D4 extract cleanly with PyMuPDF. D2 is a scan carrying a poor embedded OCR layer — 13,625 characters of German with zero `§` symbols and systematically destroyed sentence numbering. It needs re-OCR, not first OCR.
 
@@ -78,10 +78,10 @@ The most important day. Everything downstream is measured against this.
 
 ### Carryover from Day 1 · 1 h
 
-| Task | Time | Tools | Status |
-|------|------|-------|--------|
-| OCR comparison on D2 page 2 | 1 h | Tesseract | ✅ done — Tesseract wins |
-| `sources.yaml` — filename, URL, SHA-256, dates, language, authority, text_layer, page count | 1 h | PyYAML | outstanding |
+| Task                                                                                        | Time | Tools     | Status                   |
+| ------------------------------------------------------------------------------------------- | ---- | --------- | ------------------------ |
+| OCR comparison on D2 page 2                                                                 | 1 h  | Tesseract | ✅ done — Tesseract wins |
+| `sources.yaml` — filename, URL, SHA-256, dates, language, authority, text_layer, page count | 1 h  | PyYAML    | outstanding              |
 
 The OCR comparison came in under time and resolved cleanly. Hashes are already
 computed and all four source URLs identified; `sources.yaml` is transcription.
@@ -90,16 +90,16 @@ computed and all four source URLs identified; `sources.yaml` is transcription.
 
 All 50 questions come from the documents and your own experience.
 
-| Source | Count | Time |
-|--------|-------|------|
-| The ~20 defects and contradictions already in `FINDINGS.md` | 15 | 0.75 h |
-| Your own first semester — what you had to ask, look up, or got wrong | 8 | 0.75 h |
-| D1 §§ 11–19: registration, withdrawal, exam types, grading, retakes, recognition | 9 | 1.25 h |
-| D1 §§ 20–30 + D3 Re § 21: thesis, deadlines, final grade, failing the degree | 6 | 0.75 h |
-| D3 study plan + D4: modules, ECTS, exam formats, languages | 6 | 0.75 h |
-| Personal-data refusals — grades, timetable, registration status | 3 | 0.25 h |
-| Unanswerable — advice, opinions, predictions | 3 | 0.25 h |
-| **Write the scoring rules — what counts as correct — before seeing any output** | — | 1.25 h |
+| Source                                                                           | Count | Time   |
+| -------------------------------------------------------------------------------- | ----- | ------ |
+| The ~20 defects and contradictions already in `FINDINGS.md`                      | 15    | 0.75 h |
+| Your own first semester — what you had to ask, look up, or got wrong             | 8     | 0.75 h |
+| D1 §§ 11–19: registration, withdrawal, exam types, grading, retakes, recognition | 9     | 1.25 h |
+| D1 §§ 20–30 + D3 Re § 21: thesis, deadlines, final grade, failing the degree     | 6     | 0.75 h |
+| D3 study plan + D4: modules, ECTS, exam formats, languages                       | 6     | 0.75 h |
+| Personal-data refusals — grades, timetable, registration status                  | 3     | 0.25 h |
+| Unanswerable — advice, opinions, predictions                                     | 3     | 0.25 h |
+| **Write the scoring rules — what counts as correct — before seeing any output**  | —     | 1.25 h |
 
 **Two rules while writing:**
 
@@ -107,7 +107,7 @@ Write the question first, then look up the answer. If you look first, you'll onl
 
 Deliberately include 5–8 questions you expect the system to get **wrong** — ones needing two or three documents combined, or where the documents contradict each other. An eval set that scores 95% on the first run was written too kindly.
 
-**Scoring rules must cover three outcomes, not two:** correct answer, correct refusal, and correct conflict-flagging. A question like "what does Pf stand for" has a right answer that is neither a fact nor a refusal — it's *"the abbreviation is defined nowhere in binding text; here is what can be inferred and from where."* Decide now how that scores.
+**Scoring rules must cover three outcomes, not two:** correct answer, correct refusal, and correct conflict-flagging. A question like "what does Pf stand for" has a right answer that is neither a fact nor a refusal — it's _"the abbreviation is defined nowhere in binding text; here is what can be inferred and from where."_ Decide now how that scores.
 
 **Columns:** question · expected answer · expected outcome type · source doc · § reference · answerable · category · **programme**
 
@@ -119,12 +119,12 @@ The `programme` column costs one field now (`all` or `iai`) and is what lets you
 
 ## Day 3 — Baseline and support files · 6 h · ✅ COMPLETE
 
-| Task | Time | Tools |
-|------|------|-------|
-| **Upload the four PDFs directly** to a long-context call, run all 50 questions | 2 h | Gemini web UI or API |
-| Score the results, record in `notes.md` | 1.5 h | — |
-| `glossary.md` — ~60 German↔English terms | 1.5 h | — |
-| `routing.yaml` — ~30 topic → office → contact rows | 1 h | — |
+| Task                                                                           | Time  | Tools                |
+| ------------------------------------------------------------------------------ | ----- | -------------------- |
+| **Upload the four PDFs directly** to a long-context call, run all 50 questions | 2 h   | Gemini web UI or API |
+| Score the results, record in `notes.md`                                        | 1.5 h | —                    |
+| `glossary.md` — ~60 German↔English terms                                       | 1.5 h | —                    |
+| `routing.yaml` — ~30 topic → office → contact rows                             | 1 h   | —                    |
 
 **Upload the PDFs, do not paste text.** Gemini reads scanned PDFs natively. Pasting text would feed it D2's damaged OCR layer and corrupt the baseline. This also makes the baseline a fair representation of what a user would actually do.
 
@@ -141,17 +141,17 @@ targets.
 
 ---
 
-## Day 4 — Parse, extract, chunk · 8 h
+## Day 4 — Parse, extract, chunk · 8 h · 🔄 IN PROGRESS
 
-| Task | Time | Tools |
-|------|------|-------|
-| Re-OCR D2 using the Day 2 winner | 1.5 h | Tesseract or Gemini Vision |
-| Post-OCR repair pass on D2: `$`/`S`/`5`/`9` → `§`, `l`/`z`/`s` → sentence digits | 1 h | Python, regex |
-| Parse D1, D3, D4 with `get_text("dict")` — retain font size and x-position | 2 h | PyMuPDF |
-| **Structural extraction of D3's study plan table** | 1.5 h | `find_tables()` |
-| Chunker: split on § boundaries, carry the § heading into each chunk | 1.5 h | Python, regex |
-| Attach `programme` metadata — `all` for D1/D2, `iai` for D3/D4 | 0.25 h | Python |
-| Spot-check 10 random chunks for correct § / Abs. / Satz attribution | 0.5 h | — |
+| Task                                                                             | Time   | Tools                      |
+| -------------------------------------------------------------------------------- | ------ | -------------------------- |
+| Re-OCR D2 using the Day 2 winner                                                 | 1.5 h  | Tesseract or Gemini Vision |
+| Post-OCR repair pass on D2: `$`/`S`/`5`/`9` → `§`, `l`/`z`/`s` → sentence digits | 1 h    | Python, regex              |
+| Parse D1, D3, D4 with `get_text("dict")` — retain font size and x-position       | 2 h    | PyMuPDF                    |
+| **Structural extraction of D3's study plan table**                               | 1.5 h  | `find_tables()`            |
+| Chunker: split on § boundaries, carry the § heading into each chunk              | 1.5 h  | Python, regex              |
+| Attach `programme` metadata — `all` for D1/D2, `iai` for D3/D4                   | 0.25 h | Python                     |
+| Spot-check 10 random chunks for correct § / Abs. / Satz attribution              | 0.5 h  | —                          |
 
 **Superscript detection.** Sentence numbers render at a smaller font size than body text. Use the size difference from the dict output rather than trying to regex plain digits — `1,0`, `§ 16 Abs. 1`, `15 Minuten` and `3. Fachsemester` are all indistinguishable from sentence markers in flat text.
 
@@ -167,18 +167,21 @@ targets.
 
 **`programme` field is not optional.** `all` for D1/D2, `iai` for D3/D4. Half the corpus is shared across all twelve Master programmes; adding this later means re-embedding everything. Five lines now.
 
+**Status.** OCR, parsing and table extraction complete — 418 records across
+five files. The chunker is the remaining task.
+
 **Done when:** all four documents are chunked with metadata, and the study plan exists as structured rows.
 
 ---
 
 ## Day 5 — Embed and retrieve · 6 h
 
-| Task | Time | Tools |
-|------|------|-------|
-| Embedding module with chunk-hash cache, batched calls | 2 h | google-genai |
-| Build the index — normalised numpy array + metadata JSONL | 1.5 h | numpy |
-| Cosine search, top-k, with `programme in ("all", current)` filter | 1.5 h | numpy |
-| Sanity check: query by hand, look at what comes back | 1 h | — |
+| Task                                                              | Time  | Tools        |
+| ----------------------------------------------------------------- | ----- | ------------ |
+| Embedding module with chunk-hash cache, batched calls             | 2 h   | google-genai |
+| Build the index — normalised numpy array + metadata JSONL         | 1.5 h | numpy        |
+| Cosine search, top-k, with `programme in ("all", current)` filter | 1.5 h | numpy        |
+| Sanity check: query by hand, look at what comes back              | 1 h   | —            |
 
 **Done when:** you can type a question and see the right chunks come back.
 
@@ -186,13 +189,13 @@ targets.
 
 ## Day 6 — Generate answers · 7 h
 
-| Task | Time | Tools |
-|------|------|-------|
+| Task                                                                                 | Time  | Tools                |
+| ------------------------------------------------------------------------------------ | ----- | -------------------- |
 | Answer prompt: retrieved chunks in, English answer + original text + § reference out | 2.5 h | Gemini or Claude API |
-| Abstention — score floor, decline path, route from `routing.yaml` | 1.5 h | Python |
-| **Conflict detection — the third outcome** | 1.5 h | Python |
-| Refuse personal-data questions | 0.5 h | Python |
-| Manual testing on 10 questions | 1 h | — |
+| Abstention — score floor, decline path, route from `routing.yaml`                    | 1.5 h | Python               |
+| **Conflict detection — the third outcome**                                           | 1.5 h | Python               |
+| Refuse personal-data questions                                                       | 0.5 h | Python               |
+| Manual testing on 10 questions                                                       | 1 h   | —                    |
 
 **The three outcomes.** Where the documents genuinely contradict each other — D4's thesis prerequisite naming WIW, D1 § 1 omitting IAI, D3's impossible entry-into-force date, D4's semester values conflicting with the binding study plan — the correct answer is to say so, quote both sources, and point to the Prüfungsamt. Not to pick a side, and not to decline.
 
@@ -202,12 +205,12 @@ targets.
 
 ## Day 7 — Measure · 6 h
 
-| Task | Time |
-|------|------|
-| Evaluation harness — run all 50, output accuracy, recall@5, abstention rate, conflict-detection rate | 2 h |
-| First full run, record against the baseline | 1 h |
-| Read every wrong answer and note why it failed | 2 h |
-| Fix the cheapest one or two failures | 1 h |
+| Task                                                                                                 | Time |
+| ---------------------------------------------------------------------------------------------------- | ---- |
+| Evaluation harness — run all 50, output accuracy, recall@5, abstention rate, conflict-detection rate | 2 h  |
+| First full run, record against the baseline                                                          | 1 h  |
+| Read every wrong answer and note why it failed                                                       | 2 h  |
+| Fix the cheapest one or two failures                                                                 | 1 h  |
 
 **Done when:** `notes.md` shows baseline vs retrieval side by side.
 
@@ -217,13 +220,13 @@ targets.
 
 Do these one at a time and re-run the evaluation after each, recording the change.
 
-| Task | Time | Targets |
-|------|------|---------|
-| **Conflict detection** — surface disagreements instead of resolving them | 2.5 h | **E25–E30, the measured gap** |
-| **Amendment application including renumbering** — apply D2 over D1 on § 12 | 2 h | E48, and the demonstrable engineering |
-| BM25 from scratch, fused with vector scores | 2 h | module codes, `Pf`, `12,5` vs `12.5` |
-| Glossary query expansion | 0.5 h | cross-lingual recall |
-| Cross-reference resolution — D1 ↔ D3 | 0.5 h | baseline already handles these well |
+| Task                                                                       | Time  | Targets                               |
+| -------------------------------------------------------------------------- | ----- | ------------------------------------- |
+| **Conflict detection** — surface disagreements instead of resolving them   | 2.5 h | **E25–E30, the measured gap**         |
+| **Amendment application including renumbering** — apply D2 over D1 on § 12 | 2 h   | E48, and the demonstrable engineering |
+| BM25 from scratch, fused with vector scores                                | 2 h   | module codes, `Pf`, `12,5` vs `12.5`  |
+| Glossary query expansion                                                   | 0.5 h | cross-lingual recall                  |
+| Cross-reference resolution — D1 ↔ D3                                       | 0.5 h | baseline already handles these well   |
 
 **Conflict detection is now the headline feature, not a side task.** The
 baseline scored 0/6 on it. Three of those failures were independent of prompt
@@ -234,7 +237,7 @@ system with an explicit authority model can beat a model that reads everything.
 Cross-reference resolution is de-prioritised because the baseline handled it
 well unaided (E10, E40 chained provisions across sections correctly).
 
-**On renumbering.** D2 replaces § 12's list rather than appending to it, and the order changes: `Nr. 4` was *Hausarbeiten* before July 2022 and *Referat* after. A system that treats the amendment as additive gives a wrong answer that looks right. This is the single most demonstrable piece of engineering in the project — make sure the eval set contains a question that catches it.
+**On renumbering.** D2 replaces § 12's list rather than appending to it, and the order changes: `Nr. 4` was _Hausarbeiten_ before July 2022 and _Referat_ after. A system that treats the amendment as additive gives a wrong answer that looks right. This is the single most demonstrable piece of engineering in the project — make sure the eval set contains a question that catches it.
 
 **Done when:** you have a table of feature → accuracy delta.
 
@@ -242,13 +245,13 @@ well unaided (E10, E40 chained provisions across sections correctly).
 
 ## Day 9 — Deploy · 6 h
 
-| Task | Time | Tools |
-|------|------|-------|
-| FastAPI wrapper, one endpoint, index loaded at startup | 1.5 h | FastAPI |
-| Rate limits, daily cap, max query length | 1 h | Python |
-| Single HTML page: query box, answer, original text, citation, disclaimer | 2 h | HTML/JS |
-| Dockerfile with the index baked in, deploy, verify spend cap | 1.5 h | Docker, Cloud Run |
-| **Model comparison** — run the eval against 3.6 Flash, Flash-Lite, 2.5 Flash | 1 h | eval harness |
+| Task                                                                         | Time  | Tools             |
+| ---------------------------------------------------------------------------- | ----- | ----------------- |
+| FastAPI wrapper, one endpoint, index loaded at startup                       | 1.5 h | FastAPI           |
+| Rate limits, daily cap, max query length                                     | 1 h   | Python            |
+| Single HTML page: query box, answer, original text, citation, disclaimer     | 2 h   | HTML/JS           |
+| Dockerfile with the index baked in, deploy, verify spend cap                 | 1.5 h | Docker, Cloud Run |
+| **Model comparison** — run the eval against 3.6 Flash, Flash-Lite, 2.5 Flash | 1 h   | eval harness      |
 
 **The model comparison is a portfolio artifact in its own right.** Most projects
 pick a model by intuition. With a fixed 50-question set you can produce a table
@@ -261,12 +264,12 @@ evidence.
 
 ## Day 10 — Write it up · 6 h
 
-| Task | Time |
-|------|------|
-| `FAILURES.md` — 8–10 failing queries, each with a diagnosis | 2.5 h |
+| Task                                                                              | Time  |
+| --------------------------------------------------------------------------------- | ----- |
+| `FAILURES.md` — 8–10 failing queries, each with a diagnosis                       | 2.5 h |
 | `README.md` — problem, method, baseline vs retrieval, feature deltas, limitations | 2.5 h |
-| 8 example questions on the landing page | 0.5 h |
-| Final tidy, push | 0.5 h |
+| 8 example questions on the landing page                                           | 0.5 h |
+| Final tidy, push                                                                  | 0.5 h |
 
 **`FINDINGS.md` is a deliverable, not a scratchpad.** It documents twenty source defects found by reading the corpus before writing any pipeline code. Most portfolio RAG projects skip that step entirely. Link it from the README.
 
@@ -300,10 +303,10 @@ Cut in this order:
 
 **Install:** Python 3.11+, Tesseract 5.x with German language data (`deu`), Docker, git
 
-*Windows note: the Tesseract installer does not add itself to PATH. Add
+_Windows note: the Tesseract installer does not add itself to PATH. Add
 `C:\Program Files\Tesseract-OCR` via Windows environment variables, and set
 `pytesseract.pytesseract.tesseract_cmd` in code so the pipeline never depends on
-shell configuration.*
+shell configuration._
 
 **Python packages:** `google-genai`, `numpy`, `pymupdf`, `pyyaml`, `pandas`, `python-dotenv`, `fastapi`, `uvicorn`, `pytesseract`
 
@@ -311,23 +314,23 @@ shell configuration.*
 
 **Not using:** LangChain, LlamaIndex, LangGraph, n8n, any vector database.
 
-*Note: poppler-utils is no longer required. PyMuPDF handles rendering to images for OCR via `get_pixmap(dpi=300)`.*
+_Note: poppler-utils is no longer required. PyMuPDF handles rendering to images for OCR via `get_pixmap(dpi=300)`._
 
 ---
 
 ## Files you'll produce
 
-| File | Contents |
-|------|----------|
-| `docs/FINDINGS.md` | corpus inventory, extraction limits, source defects — ✅ maintained |
-| `docs/PROGRESS.md` | daily task log — ✅ maintained |
-| `config/sources.yaml` | the four documents with hashes and dates |
-| `eval.csv` | 50 questions with expected answers and outcome types |
-| `config/glossary.md` | German↔English terms |
-| `config/routing.yaml` | topic → office → contact |
-| `docs/notes.md` | scoring rules, baseline, accuracy history, decisions — ✅ maintained |
-| `docs/IMPLEMENTATION_GUIDE.md` | how each step was actually done, reproducibly — ✅ maintained |
-| `pipeline/` | parse, ocr, chunk, embed, search, answer, evaluate |
-| `app/` | FastAPI + Dockerfile + index.html |
-| `docs/FAILURES.md` | what doesn't work and why |
-| `README.md` | the writeup |
+| File                           | Contents                                                             |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `docs/FINDINGS.md`             | corpus inventory, extraction limits, source defects — ✅ maintained  |
+| `docs/PROGRESS.md`             | daily task log — ✅ maintained                                       |
+| `config/sources.yaml`          | the four documents with hashes and dates                             |
+| `eval.csv`                     | 50 questions with expected answers and outcome types                 |
+| `config/glossary.md`           | German↔English terms                                                 |
+| `config/routing.yaml`          | topic → office → contact                                             |
+| `docs/notes.md`                | scoring rules, baseline, accuracy history, decisions — ✅ maintained |
+| `docs/IMPLEMENTATION_GUIDE.md` | how each step was actually done, reproducibly — ✅ maintained        |
+| `pipeline/`                    | parse, ocr, chunk, embed, search, answer, evaluate                   |
+| `app/`                         | FastAPI + Dockerfile + index.html                                    |
+| `docs/FAILURES.md`             | what doesn't work and why                                            |
+| `README.md`                    | the writeup                                                          |

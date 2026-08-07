@@ -4,8 +4,7 @@ Running log of what the documents actually look like, established by
 extraction rather than assumption. Everything here was verified against
 PyMuPDF output, not guessed.
 
-Last updated: end of Day 1. All four documents extracted and inventoried.
-No pipeline code written yet.
+Last updated: Day 4. All four documents parsed into addressable records.
 
 ---
 
@@ -98,6 +97,22 @@ on every row.
 Known limitation: vertically merged cells collapse. The `CM/CEM` and
 `L+E` columns pile into the first row of each block (`'CM CM CM CEM'`).
 The columns that matter came through clean. Fix by hand or document it.
+
+### Parser assumptions, recorded as assumptions
+
+Verified against these four documents; not claimed as universal.
+
+- Sentence markers render below 80% of body size; body size is the most common
+  size in the document (D1 9.0, D3 10.0, D4 10.1)
+- Section headings begin at the left margin (x < 100); cross-references appear
+  mid-line at higher x
+- A contents page has more than 8 § references in under 2,500 characters
+- Per-document facts (`heading_pattern`, `layout`, `sentence_markers`,
+  `table_marker`) live in `config/sources.yaml`; structural rules live in code
+
+Known coupling: `parse_d2.py` parses the `===== PAGE n =====` separator written
+by `ocr_d2.py`. Nothing enforces that convention — change one and the other
+silently reports every record as page 1.
 
 ### Line-break hyphenation — do not strip the hyphen
 
@@ -476,6 +491,51 @@ activate with `.\.venv\Scripts\Activate.ps1`. PyMuPDF installed
 Gotcha hit and solved: naming a script `inspect.py` shadows Python's
 built-in `inspect` module and breaks PyMuPDF's import with a confusing
 circular-import error. Avoid filenames matching stdlib modules.
+
+---
+
+## Confirmed by structured extraction (Day 4)
+
+`find_tables()` on D3 page 6 yields 9 modules totalling exactly 90 ECTS, which
+promotes three findings from suspected to confirmed:
+
+```
+2-020 Data Science                   5    sem 1     Pf (5)
+2-030 Project - AI and Data Eng.     12,5 sem 1     Pf (12,5)
+1-030 Project - Industrial Ops       12,5 sem 2     Pf (12,5)
+```
+
+- **`Pf` covers exactly 30 of 90 ECTS** — one third of the degree, under an
+  abbreviation defined in no binding document.
+- **Both WPM modules are semester `1+2`.** D4 states 2nd semester. D3 binds.
+- **`55010`** is genuinely five digits with no hyphen.
+
+The binding definition of Portfolioprüfung is now retrievable as a standalone
+record (`D2 Anhang`), which is what the `Pf` finding depends on.
+
+---
+
+## The pipeline fails silently — a pattern, not an accident
+
+Seven times through OCR and parsing, a stage produced plausible output that was
+wrong in a specific way, and **none raised an error**:
+
+| Stage | Failure | Caught by |
+|---|---|---|
+| Flat table extraction | ECTS read from the wrong column | comparing distances across rows |
+| Tesseract | dropped a sentence marker entirely | counting markers against the source |
+| D1 parser | `§§ 32 bis 43` read as a section | looking at the section list |
+| D1 parser | § 44's text filed under § 31 | searching for a known provision |
+| D4 parser | 1 record from 26 pages | noticing the record count |
+| D2 parser | § 12 missing entirely | listing the sections found |
+| D2 parser | Portfolioprüfung merged with a page footer | searching for a known definition |
+
+Every one was found by checking a **specific known fact**. Automated checks tell
+you a stage ran; only known facts tell you it worked.
+
+**This file is that checklist.** Each stage now asserts something it can verify
+itself — record count against page count, § 12 and Anhang present, nine modules
+totalling 90 ECTS.
 
 ---
 

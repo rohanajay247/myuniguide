@@ -5,13 +5,13 @@ Daily record of what was done. Brief by design.
 Findings live in `FINDINGS.md`. Plan lives in `WBS_10day_v4.md`.
 How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` folder.
 
-|                       |                        |
-| --------------------- | ---------------------- |
-| Started               | 4 Aug 2026             |
-| Plan                  | 10 working days, ~62 h |
-| Days elapsed          | 4                      |
-| Phase                 | 2 — ingestion          |
-| Pipeline code written | OCR (D2 complete)      |
+|                       |                                    |
+| --------------------- | ---------------------------------- |
+| Started               | 4 Aug 2026                         |
+| Plan                  | 10 working days, ~62 h             |
+| Days elapsed          | 4                                  |
+| Phase                 | 2 — ingestion                      |
+| Pipeline code written | OCR + parsing (all four documents) |
 
 ---
 
@@ -215,8 +215,63 @@ the study plan table, write the chunker. First day of pipeline code.
 - The annex table splits across pages 5 and 6 and must be rejoined — row 11 is
   the Portfolioprüfung definition the `Pf` finding depends on.
 
-**Next:** parse D1/D3/D4 with `get_text("dict")` to recover superscripts and
-indentation, extract the D3 study plan table, then the chunker.
+**Done (cont.)**
+
+- `pipeline/parse.py` — D1, D3, D4 parsed with `get_text("dict")`
+- `pipeline/parse_d2.py` — D2 parsed from the OCR transcription
+- `pipeline/parse_table.py` — D3's study plan as 9 structured module records
+
+```
+d1_parsed.jsonl     271
+d2_parsed.jsonl      73
+d3_parsed.jsonl      41
+d4_parsed.jsonl      24
+d3_studyplan.jsonl    9
+```
+
+**Decided**
+
+- **Thresholds derived, not hardcoded.** Body size is the most common font size
+  per document; markers are below 80% of it. A fixed `< 7` would have
+  misclassified D4, whose body is 10.1pt.
+- **Per-document facts in `config/sources.yaml`, structural rules in code.**
+  `heading_pattern`, `layout`, `sentence_markers`, `table_marker` are config.
+  German legal grammar (`(?!bis\b)`) and contents-page detection are code.
+- **D4 parsed at page level** — it has no § structure. It is non-binding and
+  loses every conflict, so page granularity suffices. Recorded as
+  `layout: pages`, not left as a silent failure.
+- **Table hardcoding accepted but guarded.** `parse_table.py` hardcodes the page
+  and column indices; a nine-module / 90-ECTS assertion fires if either breaks.
+
+**Hit — seven silent failures, none of which errored**
+
+| Failure                                   | Caught by                        |
+| ----------------------------------------- | -------------------------------- |
+| `§§ 32 bis 43` read as a section          | looking at the section list      |
+| § 44's text filed under § 31              | searching for a known provision  |
+| D4: 1 record from 26 pages                | noticing the record count        |
+| D2: § 12 missing entirely                 | listing the sections found       |
+| D2: Portfolioprüfung merged with a footer | searching for a known definition |
+
+§ 44 is the cohort rule and § 12 is the amendment's central change — both would
+have produced confident citations to the wrong place.
+
+**Learned**
+
+- **Automated checks tell you a stage ran; only known facts tell you it worked.**
+  Every stage now asserts something verifiable — record count against page
+  count, § 12 and Anhang present, nine modules totalling 90 ECTS.
+- A PDF encodes appearance, never meaning. Structure is reverse-engineered from
+  font size and position, which is why parsers are per-document.
+
+**Confirmed**
+
+- `Pf` covers exactly 30 of 90 ECTS
+- Both WPM modules are semester `1+2`; D4 says 2nd semester
+- `55010` really is five digits with no hyphen
+
+**Next:** the chunker — merge the five files into one `chunks.jsonl` with stable
+IDs, then Day 5's embedding.
 
 ---
 

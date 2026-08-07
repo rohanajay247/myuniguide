@@ -374,7 +374,359 @@ are one level deeper in `.../stupos/master/`.
 
 ---
 
-## Step 4 — The evaluation set
+## Step 4 — Parse the documents into addressable records
+
+**Goal:** turn each PDF into records like
+
+```json
+{
+  "doc": "D1",
+  "section": "21",
+  "paragraph": "5",
+  "sentence": "2",
+  "text": "Sie ist innerhalb von vier bis sechs Monaten zu bearbeiten.",
+  "authority": "binding",
+  "programme": "all",
+  "page": 10
+}
+```
+
+One legal provision, its exact address, plus the metadata later stages need.
+`authority` drives the Day 8 ranking rule; `programme` is the multi-programme
+filter.
+
+### The key insight: a PDF encodes appearance, never meaning
+
+There is no "this is a heading" flag. There is only "this text is 6pt at
+x=70.9". Structure has to be reverse-engineered from visual properties, which
+is why parsers are per-document rather than universal.
+
+`get_text()` returns a flat string and throws all of that away.
+`get_text("dict")` returns nested blocks → lines → **spans**, where a span is a
+run of characters sharing one font and size, carrying `size` and `bbox`.
+
+### Three mechanisms
+
+**1. Font size identifies sentence markers.**
+
+In D1 the body is 9pt and sentence markers are 6pt. Nothing else uses 6pt. So
+these become separable, where in flat text they are identical characters:
+
+```
+1,0 ; 1,3 ; 1,7          grades           9pt
+§ 16 Abs. 1 Satz 1       cross-reference  9pt
+15 Minuten               duration         9pt
+1Die Studierenden        sentence marker  6pt
+```
+
+**Do not hardcode the threshold.** D4's body is 10.1pt with small text at 5.2,
+5.7, 6.0 and 6.6 — a fixed `< 7` misclassifies it. Derive it instead:
+
+```python
+def body_size(doc):
+    counts = Counter()
+    for page in doc:
+        for block in page.get_text("dict")["blocks"]:
+            if "lines" not in block:
+                continue
+            for line in block["lines"]:
+                for span in line["spans"]:
+                    if span["text"].strip():
+                        counts[round(span["size"], 1)] += 1
+    return counts.most_common(1)[0][0]
+
+MARKER_RATIO = 0.80    # marker if < 80% of body
+NOISE_RATIO  = 0.95    # smaller than body but not a marker => running header
+```
+
+**2. Position disambiguates headings from cross-references.**
+
+`§ 21` appears both as a heading and inside sentences like _"Näheres regelt
+§ 21 Abs. 5"_. Text alone cannot separate them. Position can — headings sit at
+the left margin (x≈70), cross-references sit mid-line (x≈250):
+
+```python
+if re_section.search(joined) and left < MARGIN_X:
+```
+
+**3. A state machine assembles sentences.**
+
+The PDF yields lines, but a sentence can begin mid-line. Text accumulates in a
+buffer; four variables track position. When a marker appears it means _the
+previous sentence just ended_:
+
+```python
+flush()               # save with the OLD sentence number
+state["sentence"] = t # then move on
+```
+
+**Reverse those two lines and every sentence is labelled with the following
+sentence's number.** Silently, and every citation wrong.
+
+### Justified text scatters spans
+
+```
+'über ' 'den ' 'Rücktritt ' 'von ' 'Studierenden ' 'von ' 'bereits '
+```
+
+The PDF stretches word spacing to justify, and each stretched gap becomes a
+span boundary. Spans must be regrouped into lines before anything else.
+
+### Three bugs, each found by checking a known fact
+
+None of these raised an error. Each was found by asking whether a specific
+provision landed where it should.
+
+**`§§ 32 bis 43` parsed as "section 32, titled bis 43".** Fixed with
+`(?!bis\b)`. German legal grammar, so it belongs in code — it will appear in
+any German regulation.
+
+**§ 44's text filed under § 31.** `§ 44` sits alone on its line with
+`Inkrafttreten` on the next, and the regex demanded a title on the same line.
+Made the title optional: `\s*(.*)` instead of `\s+(.+)`. § 44 is the cohort
+rule — the version in force when you enrolled governs you — so this would have
+produced confident citations to a section that does not exist in the document.
+
+**D4 produced 1 record from 26 pages** and reported success. It has no `§`
+structure at all; modules are headed `Module: X`. Nothing matched, nothing
+flushed, everything accumulated into a single record.
+
+Hence the cheapest possible alarm:
+
+```python
+if len(records) < doc.page_count:
+    print(f"  WARNING: {len(records)} records from {doc.page_count} pages")
+```
+
+### Where the config/code line falls
+
+**Per-document facts go in `config/sources.yaml`. Structural rules go in code.**
+
+```yaml
+# D1, D2
+  heading_pattern: '^§\s*(\d+[a-z]?)\b\s*(?!bis\b)(.*)'
+# D3 — writes "Re § 2" for references and "Para. 3" where D1 writes "(3)"
+  heading_pattern: '^(?:Re\s+)?§\s*(\d+[a-z]?)\b\s*(?!bis\b)(.*)'
+# D4 — no § structure at all
+  layout: pages
+  sentence_markers: false
+```
+
+Contents-page detection stays in code, because it is a property of contents
+pages generally rather than of D1 page 3:
+
+```python
+def is_contents(lines):
+    joined = " ".join(...)
+    return len(re.findall(r"§\s*\d+", joined)) > 8 and len(joined) < 2500
+```
+
+`SKIP_PAGES = {2, 3, 4}` would have been genuine hardcoding — a magic number
+true of one file.
+
+### D4: an accepted limitation
+
+D4 is parsed one record per page rather than per provision. It is descriptive
+rather than binding and loses every conflict against the statutes, so page-level
+granularity is sufficient for its role as the source cited _against_. Recorded
+in `sources.yaml` as `layout: pages` rather than left as a silent failure.
+
+Cost: a question like "what is the workload for Operational Excellence?"
+retrieves the whole page rather than that field.
+
+### Result
+
+```
+d1_parsed.jsonl   271 records
+d3_parsed.jsonl    41
+d4_parsed.jsonl    24   (WARNING fired: 24 from 26 pages — two image-only pages)
+```
+
+---
+
+## Step 5 — Parse D2 from OCR text
+
+D2 has no font-size information, so the same state machine runs over
+`data/d2_ocr.txt` with markers found by regex instead of by size.
+
+```python
+# Gemini produced real superscripts on page 1 and plain digits on pages 2-6
+# from the same prompt. Accept both. The lookbehind prevents matching inside
+# dates (12.07.2022) and grades (1,0).
+RE_MARKER = re.compile(r"(?<![\w,\.])([0-9¹²³⁴⁵⁶⁷⁸⁹])(?=[A-ZÄÖÜ][a-zäöüß])")
+SUPER = str.maketrans("¹²³⁴⁵⁶⁷⁸⁹", "123456789")
+```
+
+### An amending statute has two heading shapes
+
+```
+1. § 12 wird wie folgt geändert:     the section being amended
+„§ 12a Online-Prüfungen              the section being inserted
+```
+
+The first run only matched the second form, so **§ 12 was missing entirely** —
+and § 12 is the most important change D2 makes, the one that reorders the exam
+list so `Nr. 4` means _Hausarbeiten_ before July 2022 and _Referat_ after.
+
+```python
+RE_SECTION = re.compile(r"^(?:\d{1,2}\.\s*)?„?§\s*(\d+[a-z]?)\b\s*(.*)")
+```
+
+The `„?` allows the German opening quote, since the statute quotes the text it
+inserts.
+
+### The annex row that nearly vanished
+
+Gemini rendered the annex as a Markdown table, but the table splits across
+pages 5 and 6, and page 6's row lost its leading `|`. That row is
+**the only binding definition of Portfolioprüfung**, the exam type covering 30
+of the programme's 90 ECTS.
+
+It was first parsed as part of § 12e with the page footer attached:
+
+```
+§12e :: Hochschule Albstadt-Sigmaringen ... University 5 11. Portfolioprüfung | Prüfung...
+```
+
+Two fixes — a second row pattern, and footer stripping:
+
+```python
+RE_TABLE_ROW = re.compile(r"^\d{1,2}\.\s+\S.*\|")
+```
+
+Annex rows are labelled `section: "Anhang"` rather than inheriting the previous
+section number.
+
+**`table_marker: '|'` lives in `sources.yaml`**, not in code — it assumes Gemini
+emits Markdown, which it did _despite being told not to reformat_. A model or
+prompt change breaks that assumption, so it belongs in config where it is
+visible.
+
+### Known coupling
+
+`RE_PAGE` parses the `===== PAGE n =====` separator written by `ocr_d2.py`. The
+two files share a convention with nothing enforcing it — change one and the
+other silently stops finding pages, and every record gets `page: 1`. Writing
+JSONL with a real `page` field from the OCR step would remove the coupling.
+
+### Result
+
+```
+d2_parsed.jsonl   73 records
+sections: 12, 12a, 12b, 12c, 12d, 12e, Anhang
+```
+
+§ 12b Abs. 2 has all six sentences correctly numbered, including the ³ that
+Tesseract dropped. Built-in warnings now check for § 12 and Anhang.
+
+Remaining blemishes, accepted: three records after the annex inherit
+`section: Anhang`, the Markdown separator row survives, and § 12's eleven-item
+exam list is one blob rather than eleven items. None affects retrievability.
+
+---
+
+## Step 6 — Extract the study plan table
+
+D3 page 6 answers more real student questions than any other page — ECTS per
+module, semester, examination type, teaching language — and nothing else does.
+
+Flat extraction destroys the column alignment. Empty cells produce inconsistent
+blank counts, long module names wrap, and the first row merges its code and
+name, so the distance from a module code to its ECTS value runs **8, 8, 9, 10,
+8** across five consecutive rows. Counting positions returns `4` where `5`
+belongs, with no error.
+
+```python
+tables = doc[5].find_tables()
+rows = tables.tables[0].extract()      # 20 rows x 15 columns, aligned
+```
+
+Column map, verified against the extracted table:
+
+```
+ 0  module code        2-010, 55010
+ 1  module name
+ 9  semester           1, 2, 1+2, 3
+10  ECTS               5, 12,5, 7,5, 30
+12  examination type   R (5), Pf (5), Ma (30)
+13  preliminary exam   Ha**  (only 2-010)
+14  language           EN, EN/ DE
+```
+
+**Known limitation:** vertically merged cells collapse into the first row of
+each block — row 4 shows `'CM CM CM CEM'` and rows 5–7 show nothing. The columns
+that matter come through clean on every row.
+
+Module rows are detected by pattern rather than row index, so the script
+survives the table gaining a header row:
+
+```python
+RE_MODULE_CODE = re.compile(r"^\d+-?\d+$")
+```
+
+Each row becomes a searchable sentence, because everything downstream embeds
+`text`. Structured fields ride alongside for exact lookups.
+
+**The guard that makes the remaining hardcoding acceptable:**
+
+```python
+total = sum(float(r["ects"].replace(",", ".")) for r in records if r["ects"])
+if len(records) != 9 or total != 90:
+    print("  WARNING: expected 9 modules totalling 90 ECTS")
+```
+
+`PAGE = 5` and the column indices are hardcoded. That is defensible only
+because this check fires if either assumption breaks. Generalising would mean
+detecting the page by content and mapping columns by header text — real work,
+for a case that does not exist yet.
+
+### Result
+
+```
+9 modules, 90 ECTS, no warning
+
+2-010   5      sem 1     R (5)               Artificial Intelligence
+2-020   5      sem 1     Pf (5)              Data Science
+2-030   12,5   sem 1     Pf (12,5)           Project - AI and Data Engineering
+2-040   7,5    sem 1+2   X (7,5)             WPM - AI and Data Engineering
+1-010   5      sem 2     R (2,5) + La (2,5)  Digital Technology and Management
+1-020   5      sem 2     Ha (5)              Operational Excellence
+1-030   12,5   sem 2     Pf (12,5)           Project - Industrial Operations
+1-040   7,5    sem 1+2   X (7,5)             WPM - Industrial Operations
+55010   30     sem 3     Ma (30)             Master's Thesis
+```
+
+Confirms three findings from structured data rather than eyeballing: `Pf`
+covers exactly 30 of 90 ECTS; both WPM modules are `1+2` where D4 says 2nd
+semester; and `55010` really is five digits with no hyphen where every other
+code is `n-0n0`.
+
+---
+
+## The pattern: this pipeline fails silently
+
+Seven times through parsing and OCR, a stage produced plausible output that was
+wrong in a specific, checkable way:
+
+| Stage                 | Failure                               | How it was caught                  |
+| --------------------- | ------------------------------------- | ---------------------------------- |
+| Flat table extraction | ECTS read from the wrong column       | Compared distances across rows     |
+| Tesseract             | Dropped a sentence marker entirely    | Counted markers against the source |
+| D1 parser             | `§§ 32 bis 43` read as a section      | Looked at the section list         |
+| D1 parser             | § 44's text filed under § 31          | Searched for a known provision     |
+| D4 parser             | 1 record from 26 pages                | Noticed the record count           |
+| D2 parser             | § 12 missing entirely                 | Listed the sections found          |
+| D2 parser             | Portfolioprüfung merged with a footer | Searched for a known definition    |
+
+**Not one raised an error.** Every one was caught by checking a specific known
+fact — which is what `FINDINGS.md` is actually for. It is the checklist.
+
+Hence every stage now asserts something it can verify itself: record count
+against page count, § 12 and Anhang present, nine modules totalling 90 ECTS.
+
+---
+
+## Step 7 — The evaluation set
 
 **50 questions with known answers, written before any pipeline code.** This is
 the gate: without it, no claim about the system is falsifiable.
@@ -407,7 +759,7 @@ biased in its favour. Corrections after that point would not be legitimate.
 
 ---
 
-## Step 5 — The long-context baseline
+## Step 8 — The long-context baseline
 
 **Deliberately low-tech: no code.** It runs once, and reading fifty raw responses
 by hand teaches you what the failure modes look like.
