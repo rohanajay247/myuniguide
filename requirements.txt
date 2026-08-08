@@ -1,0 +1,9 @@
+google-genai
+numpy
+pymupdf
+pyyaml
+python-dotenv
+pytesseract
+pillow
+fastapi
+uvicorn

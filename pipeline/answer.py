@@ -91,9 +91,9 @@ def answer(question, matrix, chunks, top_k=5, retriever=search):
 
 def main():
     args = sys.argv[1:]
-    dense_only = "--dense" in args
-    if dense_only:
-        args.remove("--dense")
+    use_hybrid = "--hybrid" in args
+    if use_hybrid:
+        args.remove("--hybrid")
     if not args:
         print(__doc__)
         raise SystemExit(1)
@@ -101,9 +101,9 @@ def main():
     question = " ".join(args)
     matrix, chunks = load_index()
     text, results = answer(question, matrix, chunks,
-                           retriever=search if dense_only else hybrid)
+                           retriever=hybrid if use_hybrid else search)
 
-    print(f"\nQ: {question}   [{'dense' if dense_only else 'hybrid'}]\n")
+    print(f"\nQ: {question}   [{'hybrid' if use_hybrid else 'dense'}]\n")
     print(text)
     print("\n--- retrieved ---")
     for score, chunk in results:

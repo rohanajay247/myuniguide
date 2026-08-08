@@ -11,6 +11,8 @@ data/*.txt
 data/*.png
 data/*.jsonl
 data/*.npy
+data/*.json
+!config/*.json
 
 .DS_Store
 Thumbs.db
