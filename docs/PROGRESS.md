@@ -5,13 +5,13 @@ Daily record of what was done. Brief by design.
 Findings live in `FINDINGS.md`. Plan lives in `WBS_10day_v4.md`.
 How things were done lives in `IMPLEMENTATION_GUIDE.md`. All in this `docs/` folder.
 
-|                       |                                                       |
-| --------------------- | ----------------------------------------------------- |
-| Started               | 4 Aug 2026                                            |
-| Plan                  | 10 working days, ~62 h                                |
-| Days elapsed          | 8                                                     |
-| Phase                 | 4 complete — depth measured, simplest config retained |
-| Pipeline code written | OCR, parsing, chunking, embedding, search, generation |
+|                       |                                       |
+| --------------------- | ------------------------------------- |
+| Started               | 4 Aug 2026                            |
+| Plan                  | 10 working days, ~62 h                |
+| Days elapsed          | 9                                     |
+| Phase                 | 5 — deployed, write-up remaining      |
+| Pipeline code written | Full pipeline + FastAPI app, deployed |
 
 ---
 
@@ -495,6 +495,69 @@ as the ablation — the rejection is the interesting part.
 
 **Next:** Day 9 — deploy, or record a demo. Day 10 — `FAILURES.md` and the
 README.
+
+---
+
+## Day 9 — 6 Aug · Deployment DONE
+
+**Live at** `https://myuniguide-703440239913.europe-west1.run.app`
+
+**Done**
+
+- Codebase cleaned: scratch scripts removed, eval runs renamed `eval_1_` to
+  `eval_5_` in the order they were run, `requirements.txt` added
+- `git init`, first commit, branch renamed to `main`
+- `app/main.py` — FastAPI, index loaded once at startup, three endpoints
+  (`/`, `/ask`, `/health`)
+- `app/index.html` — plain HTML/CSS/JS, no build step. Response type shown as a
+  coloured tag; sources listed with binding vs descriptive marked
+- `Dockerfile` + `.dockerignore` + `.gcloudignore`
+- Deployed to Cloud Run, `europe-west1`, public
+
+**Decided**
+
+- **Renamed to MyUniGuide.** The name is the product; the subtitle names the
+  current scope, so adding a second programme changes only the subtitle.
+- **Plain HTML, not React.** A build step is a second thing that can break at
+  deploy time, and the `/ask` endpoint returns JSON — a React frontend on Vercel
+  can be added later without touching the backend.
+- **Rate limits set from measured cost.** ₹0.94 per question on gemini-3.6-flash
+  (measured, roughly double the token estimate — thinking tokens are billed at
+  the output rate). 50/day caps worst case at ~₹47/day.
+- **`--min-instances=1 --max-instances=1`.** The rate-limit counters are
+  in-memory, so they reset whenever a container restarts. One long-lived
+  container means one counter. Documented as a known limitation.
+- **A `DISABLED` env var** as a graceful kill switch — page stays up, model calls
+  refuse — alongside the real off switch, which is deleting the API key.
+
+**Hit — four failures before it deployed**
+
+| Failure                                                        | Cause                                                                                                                                                                                                                  |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PERMISSION_DENIED` on build                                   | Cloud Build's default service account lacked `cloudbuild.builds.builder` and `storage.objectViewer`. New projects ship without them.                                                                                   |
+| `docker: not recognized`                                       | Docker Desktop not running.                                                                                                                                                                                            |
+| Container ran but `/ask` 500'd                                 | A non-Gemini token was passed as the key. Gemini keys begin `AIza`. The container was fine — Google rejected the credential.                                                                                           |
+| **`COPY failed: data/index.npy does not exist`** — three times | **`.gcloudignore` did not exist, so gcloud fell back to `.gitignore` when deciding what to upload.** `.gitignore` excludes `data/*.npy` — so the index never reached Cloud Build, and `.dockerignore` never got a say. |
+
+**The index bug is the same shape as everything else in this project.** Three
+files control what gets included — `.gitignore`, `.dockerignore`, `.gcloudignore`
+— the one that mattered did not exist, and a rule written for git silently
+governed a cloud build. Nothing errored until step 8 of 12, four minutes in.
+
+**Learned**
+
+- Test the container locally before deploying. Once it ran on `localhost:8080`,
+  everything after was environment, not code.
+- Cloud Build is a clean environment and surfaces what a local machine hides —
+  the local build worked because the files were already there.
+
+**Noted**
+
+- The API key was pasted into a chat window three times during this session and
+  rotated each time. Pass secrets via `--env-file` or a shell variable, and never
+  copy a command line containing one.
+
+**Next:** Day 10 — `FAILURES.md`, the README, and push to GitHub.
 
 ---
 

@@ -4,7 +4,7 @@ Running log of what the documents actually look like, established by
 extraction rather than assumption. Everything here was verified against
 PyMuPDF output, not guessed.
 
-Last updated: Day 6. System answers end to end; full evaluation pending.
+Last updated: Day 9. System built, measured at 42/50, and deployed.
 
 ---
 
@@ -111,13 +111,20 @@ Verified against these four documents; not claimed as universal.
 - Per-document facts (`heading_pattern`, `layout`, `sentence_markers`,
   `table_marker`) live in `config/sources.yaml`; structural rules live in code
 
-Known couplings, both unenforced:
+Known couplings, all unenforced:
 
 - `parse_d2.py` parses the `===== PAGE n =====` separator written by
   `ocr_d2.py`. Change one and the other silently reports every record as page 1.
 - `index.npy` row _i_ corresponds to `index.json` entry _i_. Reorder one alone
   and every search result points at the wrong chunk. `search.py` asserts the
   lengths match, which catches truncation but not reordering.
+- Three ignore files govern three different stages — `.gitignore` (what git
+  tracks), `.dockerignore` (the Docker build context), `.gcloudignore` (what
+  gcloud uploads). **When `.gcloudignore` is absent, gcloud falls back to
+  `.gitignore`**, so a rule written for version control can silently exclude
+  files from a cloud build.
+- Rate-limit counters in `app/main.py` are in-memory and reset on container
+  restart. Mitigated with `--min-instances=1 --max-instances=1`, not solved.
 
 Chunking assumption: sentences are grouped by paragraph, so the retrieval unit
 is a whole Absatz. 15 chunks exceed 1,500 characters, all D4 pages — an
@@ -586,18 +593,27 @@ Similarity cannot know a rule is _disapplied_ elsewhere. Candidate for
 
 ## The pipeline fails silently — a pattern, not an accident
 
-Seven times through OCR and parsing, a stage produced plausible output that was
-wrong in a specific way, and **none raised an error**:
+**Eight times** across OCR, parsing and deployment, a stage produced plausible
+output or a misleading signal, and **none raised an error at the point of
+failure**:
 
-| Stage                 | Failure                                    | Caught by                           |
-| --------------------- | ------------------------------------------ | ----------------------------------- |
-| Flat table extraction | ECTS read from the wrong column            | comparing distances across rows     |
-| Tesseract             | dropped a sentence marker entirely         | counting markers against the source |
-| D1 parser             | `§§ 32 bis 43` read as a section           | looking at the section list         |
-| D1 parser             | § 44's text filed under § 31               | searching for a known provision     |
-| D4 parser             | 1 record from 26 pages                     | noticing the record count           |
-| D2 parser             | § 12 missing entirely                      | listing the sections found          |
-| D2 parser             | Portfolioprüfung merged with a page footer | searching for a known definition    |
+| Stage                 | Failure                                                                            | Caught by                                |
+| --------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------- |
+| Flat table extraction | ECTS read from the wrong column                                                    | comparing distances across rows          |
+| Tesseract             | dropped a sentence marker entirely                                                 | counting markers against the source      |
+| D1 parser             | `§§ 32 bis 43` read as a section                                                   | looking at the section list              |
+| D1 parser             | § 44's text filed under § 31                                                       | searching for a known provision          |
+| D4 parser             | 1 record from 26 pages                                                             | noticing the record count                |
+| D2 parser             | § 12 missing entirely                                                              | listing the sections found               |
+| D2 parser             | Portfolioprüfung merged with a page footer                                         | searching for a known definition         |
+| `recall_hit` metric   | matched document only, so wrong-provision hits counted as successes                | comparing against manually-read failures |
+| Cloud Build           | index never uploaded — `.gcloudignore` absent, so `.gitignore` governed the upload | reading the build's file list            |
+
+The last two are the same lesson in different clothing. The metric reported
+near-perfect recall on a smoke test where two of five rows had failed _because
+of_ retrieval; had it gone unnoticed, Day 8 would have been aimed at the prompt
+while the real problem sat upstream. And a rule written for git silently
+governed a cloud build, three edits to the wrong file changing nothing.
 
 Every one was found by checking a **specific known fact**. Automated checks tell
 you a stage ran; only known facts tell you it worked.

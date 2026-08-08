@@ -1,0 +1,14 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+.env
+data/raw/
+data/*.txt
+data/*.csv
+data/*.jsonl
+data/*.png
+docs/
+*.md
+Dockerfile
+

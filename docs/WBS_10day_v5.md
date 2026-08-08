@@ -2,7 +2,7 @@
 
 ## IAI StuPO Assistant
 
-_10-day build plan · revision 4_
+_10-day build plan · revision 5_
 
 **10 working days · ~62 hours · 6 August 2026**
 
@@ -10,9 +10,21 @@ Owner: Rohan
 Hochschule Albstadt-Sigmaringen
 M.Sc. Industrial Artificial Intelligence · Cohort SS 2026
 
-_Companion to BRD v0.9_
+_Companion to BRD v0.11_
 
 ---
+
+### Changes from revision 4
+
+**Days 4 to 9 complete.** System built, measured at 42/50, and deployed to Cloud
+Run. Only Day 10 — the write-up — remains.
+
+**Day 8 concluded against expectation.** BM25 and the prompt rule were both
+built, measured and rejected. The simplest configuration won all four rounds.
+
+**Day 9's model comparison was dropped**, with reasoning recorded: eight
+failures, five of which are retrieval misses where no model can answer from a
+chunk it was not given. Model capability was not the binding constraint.
 
 ### Changes from revision 3
 
@@ -141,7 +153,7 @@ targets.
 
 ---
 
-## Day 4 — Parse, extract, chunk · 8 h · 🔄 IN PROGRESS
+## Day 4 — Parse, extract, chunk · 8 h · ✅ COMPLETE
 
 | Task                                                                             | Time   | Tools                      |
 | -------------------------------------------------------------------------------- | ------ | -------------------------- |
@@ -174,7 +186,7 @@ five files. The chunker is the remaining task.
 
 ---
 
-## Day 5 — Embed and retrieve · 6 h
+## Day 5 — Embed and retrieve · 6 h · ✅ COMPLETE
 
 | Task                                                              | Time  | Tools        |
 | ----------------------------------------------------------------- | ----- | ------------ |
@@ -187,7 +199,7 @@ five files. The chunker is the remaining task.
 
 ---
 
-## Day 6 — Generate answers · 7 h
+## Day 6 — Generate answers · 7 h · ✅ COMPLETE
 
 | Task                                                                                 | Time  | Tools                |
 | ------------------------------------------------------------------------------------ | ----- | -------------------- |
@@ -203,7 +215,7 @@ five files. The chunker is the remaining task.
 
 ---
 
-## Day 7 — Measure · 6 h
+## Day 7 — Measure · 6 h · ✅ COMPLETE — 42/50
 
 | Task                                                                                                 | Time |
 | ---------------------------------------------------------------------------------------------------- | ---- |
@@ -216,7 +228,7 @@ five files. The chunker is the remaining task.
 
 ---
 
-## Day 8 — Depth · 7 h
+## Day 8 — Depth · 7 h · ✅ COMPLETE — all changes rejected
 
 Do these one at a time and re-run the evaluation after each, recording the change.
 
@@ -243,7 +255,7 @@ well unaided (E10, E40 chained provisions across sections correctly).
 
 ---
 
-## Day 9 — Deploy · 6 h
+## Day 9 — Deploy · 6 h · ✅ COMPLETE — live
 
 | Task                                                                         | Time  | Tools             |
 | ---------------------------------------------------------------------------- | ----- | ----------------- |
@@ -258,11 +270,19 @@ pick a model by intuition. With a fixed 50-question set you can produce a table
 of accuracy, false-answer rate and cost per 1,000 queries, and choose with
 evidence.
 
-**Done when:** a public URL works.
+**Live:** `https://myuniguide-703440239913.europe-west1.run.app`
+
+**Four failures before it deployed**, all environment rather than code. The
+instructive one: `.gcloudignore` did not exist, so gcloud fell back to
+`.gitignore` when deciding what to upload — and `.gitignore` excludes
+`data/*.npy`. The index never reached Cloud Build, and `.dockerignore` never got
+a say. Editing `.dockerignore` three times changed nothing.
+
+**Done when:** a public URL works. ✅
 
 ---
 
-## Day 10 — Write it up · 6 h
+## Day 10 — Write it up · 6 h · ⬅ REMAINING
 
 | Task                                                                              | Time  |
 | --------------------------------------------------------------------------------- | ----- |

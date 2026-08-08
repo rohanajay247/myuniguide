@@ -335,6 +335,21 @@ different causes and none responded to retrieval or prompt changes:
 Improving from 0/6 to 3/6 was the architectural gain. Getting past 3/6 appears
 to need something other than better retrieval or a better-worded rule.
 
+### Deployed configuration
+
+Dense retrieval, k=5, `gemini-3.6-flash` at temperature 0, `gemini-embedding-001`
+at 768 dimensions. Live at
+`https://myuniguide-703440239913.europe-west1.run.app`.
+
+**Measured cost: ₹0.94 per question** — roughly double a token-count estimate,
+because thinking tokens bill at the output rate. Rate limits set from that
+figure: 10 per IP per hour, 50 per day, capping worst case at about ₹47/day.
+
+**Model comparison not run.** Five of the eight failures are retrieval misses
+where no model can answer from a chunk it was not given, so model capability was
+not expected to be the binding constraint. Listed as future work rather than
+silently skipped.
+
 ### Stopping here
 
 Four measured attempts, and the simplest configuration won. Further tuning

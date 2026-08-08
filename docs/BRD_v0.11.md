@@ -4,15 +4,25 @@
 
 _English-language access to the examination regulations governing the IAI Master's programme_
 
-**Version 0.10 · 6 August 2026**
+**Version 0.11 · 6 August 2026**
 
 Owner: Rohan
 Hochschule Albstadt-Sigmaringen
 M.Sc. Industrial Artificial Intelligence · Cohort SS 2026
 
-_Status: Evaluation set written, baseline measured at 84%. Ready to build ingestion._
+_Status: Built, measured and deployed. Live at https://myuniguide-703440239913.europe-west1.run.app — write-up remaining._
 
 ---
+
+### Changes from v0.10
+
+| #   | Change                                                                  | Why                                                                                |
+| --- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1   | **Result recorded: 42/50, same as baseline, inverted failure profile.** | Lookup 33/33 → 30/34; conflicts 0/6 → 3/6; false answers 2/11 → 1/10.              |
+| 2   | **Hybrid retrieval built and rejected on measurement.**                 | Equal-weight RRF cost 15 points; down-weighting still trailed dense alone.         |
+| 3   | **Deployed** to Cloud Run at `europe-west1`, public, rate-limited.      | A link beats a repo.                                                               |
+| 4   | Rate limits set from measured cost (₹0.94/question), not estimate.      | 50/day caps exposure at ~₹47/day.                                                  |
+| 5   | Model comparison dropped, with reasoning recorded.                      | Failures are retrieval-dominated; model capability was not the binding constraint. |
 
 ### Changes from v0.8
 
@@ -265,15 +275,15 @@ projects pick a model by intuition, this one picks it with evidence.
 
 **Phase 0 — Discovery.** ✅ Done. Documents found, extracted, inventoried. Roughly twenty source defects catalogued in `docs/FINDINGS.md`, each a candidate evaluation question.
 
-**Phase 1 — Evaluation set and baseline.** Write 50 real questions with known correct answers. Run them against a long-context prompt with the four PDFs uploaded directly, and record the score. No pipeline code yet — without a test set, changes to retrieval can be described but not measured.
+**Phase 1 — Evaluation set and baseline.** ✅ Done. 50 questions; long-context baseline 42/50 (84%), lookup 33/33, conflicts 0/6.
 
-**Phase 2 — Ingestion.** Re-OCR D2. Parse the rest, extract the study plan structurally, chunk on section boundaries, attach metadata.
+**Phase 2 — Ingestion.** ✅ Done. D2 re-OCR'd with Gemini Vision; D1/D3/D4 parsed via `get_text("dict")`; study plan extracted with `find_tables()`; 418 records chunked into 191.
 
-**Phase 3 — Retrieval.** Embeddings, search, answer generation with citations, and the abstention path. First real accuracy number.
+**Phase 3 — Retrieval.** ✅ Done. 191 chunks, 768-dimension index (573 KB), cosine search, cited answers, abstention and conflict detection. **42/50.**
 
-**Phase 4 — Depth.** BM25, amendment application including renumbering, cross-references, conflict detection. Re-run the evaluation after each addition and record what it changed.
+**Phase 4 — Depth.** ✅ Done. Four configurations measured; the simplest won. BM25 built from scratch and rejected — equal-weight fusion cost 15 percentage points, down-weighting still trailed dense alone. A prompt rule aimed at one failing row broke two passing ones. `bm25.py` and `hybrid()` retained as the ablation.
 
-**Phase 5 — Ship.** Deploy, write the failure analysis, write the README.
+**Phase 5 — Ship.** ✅ Deployed to Cloud Run. `FAILURES.md` and the README remain.
 
 **Later (v2):** add exactly one other programme — Systems Engineering or BSA. That makes programme filtering genuinely testable rather than theoretical, and it is a weekend rather than a month. If it works cleanly with one, twelve is bookkeeping. Then student services pages, then life-in-Germany guidance.
 

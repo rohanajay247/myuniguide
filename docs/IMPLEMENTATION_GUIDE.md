@@ -1088,7 +1088,185 @@ apart from generation failures.
 
 ---
 
-## Step 10 — The evaluation set
+## Step 10 — Hybrid retrieval, built and rejected
+
+BM25 written from scratch — IDF weighting, term-frequency saturation, length
+normalisation. The tokeniser is the part worth keeping:
+
+```python
+RE_TOKEN = re.compile(r"[A-Za-zÄÖÜäöüß]+|\d+[-,.]?\d*|§")
+```
+
+A standard tokeniser splits on punctuation, which turns `2-010` into `2` and
+`010`, `12,5` into `12` and `5`, and deletes `§` entirely — precisely the tokens
+BM25 exists to match here.
+
+**In isolation it works exactly as intended:**
+
+```
+query           dense                  BM25
+"what is Pf"    0 of 3 chunks          3 of 3 chunks, ranks 1-3
+"2-020"         —                      exact hit, 6.77 vs 1.92 next
+"how long ...   correct at 0.742       no relevant result at all
+ for my thesis"
+```
+
+Opposite failure modes — the textbook argument for fusing them.
+
+**Fusion made things worse.** Reciprocal Rank Fusion at equal weight cost 15
+percentage points: recall fell from 37/40 to 22/40 and seventeen answer rows
+became declines. All natural-language lookups where BM25 matched on _is_, _the_,
+_how_ and RRF weighted that noise as heavily as dense's signal.
+
+Down-weighting BM25 to 0.25 recovered most of it (40/50, 34/40) and produced one
+genuine win — E48 flipped to correct because it needed D2 § 12's list, which
+dense never retrieved. Still net worse than dense alone.
+
+**A prompt rule aimed at one row broke two others.** Adding _"if a binding
+passage and a NOT binding passage state different facts, that is a CONFLICT"_
+did not fix E28, broke E29, and made E50 over-flag. Conflict detection fell 3/6
+to 2/6. Teaching a rule to catch one case taught over-application.
+
+| Configuration                 | Type match | Recall@5  | Conflicts |
+| ----------------------------- | ---------- | --------- | --------- |
+| **dense k=5**                 | **42/50**  | **37/40** | **3/6**   |
+| hybrid, equal-weight RRF      | 27/50      | 22/40     | 3/6       |
+| hybrid, BM25 x 0.25           | 40/50      | 34/40     | 3/6       |
+| dense + binding/conflict rule | 41/50      | 37/40     | 2/6       |
+
+**Reverting reproduced the original run exactly**, row for row — so at
+temperature 0 the system is deterministic and configuration differences are
+signal rather than noise. Worth confirming before reading a two-point change as
+progress.
+
+`bm25.py` and `hybrid()` are retained in the codebase. The rejection is the
+interesting part.
+
+---
+
+## Step 11 — Deploy
+
+### Architecture
+
+```
+Browser -> HTML page -> FastAPI -> index in memory -> Gemini -> answer
+```
+
+The index is 573 KB and ships inside the container image. No database, no
+external state. The only network call per query is to Gemini, server-side — the
+API key never reaches the browser.
+
+### Rate limits, derived from measured cost
+
+Measured: **₹0.94 per question** on gemini-3.6-flash, roughly double a
+token-count estimate because thinking tokens bill at the output rate.
+
+```python
+PER_IP_PER_HOUR = 10
+DAILY_TOTAL = 50          # ~₹47/day worst case
+```
+
+**Known limitation:** the counters are in-memory, so they reset whenever the
+container restarts — a patient attacker could wait for a scale-to-zero and start
+again. Deploying with `--min-instances=1 --max-instances=1` means one long-lived
+container holds one counter.
+
+Kill switches, in order of reliability: **delete the API key** (instant,
+everywhere, one click), delete the Cloud Run service, set `--max-instances=0`,
+or set `DISABLED=1` for a graceful pause with the page still up. Only the first
+works if anything else is misconfigured.
+
+### Frontend
+
+Plain HTML, CSS and vanilla JS — no build step, because a build step is a second
+thing that can break at deploy time. Two design choices carry the project's
+point: **the response type renders as a coloured tag** (ANSWER / DECLINE /
+CONFLICT), and **sources show their binding status**, so a reader can see the
+authority ranking working rather than take it on trust.
+
+The `/ask` endpoint returns JSON, so a React frontend can be added on Vercel
+later without touching the backend.
+
+### The four failures before it deployed
+
+**Cloud Build permissions.** New projects ship without the roles Cloud Build's
+default service account needs:
+
+```
+gcloud projects add-iam-policy-binding PROJECT \
+  --member="serviceAccount:NNNN-compute@developer.gserviceaccount.com" \
+  --role="roles/cloudbuild.builds.builder"
+# and roles/storage.objectViewer
+```
+
+The build runs as that account, not as you — your permissions do not transfer.
+
+**A non-Gemini token passed as the key.** Gemini API keys begin `AIza`. The
+container was working correctly; Google rejected the credential.
+
+**`COPY failed: data/index.npy does not exist` — three times.**
+
+This one is worth understanding. Three files control what gets included at
+different stages:
+
+| File            | Controls                               |
+| --------------- | -------------------------------------- |
+| `.gitignore`    | what git tracks                        |
+| `.dockerignore` | what the Docker build context includes |
+| `.gcloudignore` | **what gcloud uploads to Cloud Build** |
+
+`.gcloudignore` did not exist — and when it is absent, **gcloud falls back to
+`.gitignore`**. `.gitignore` excludes `data/*.npy`, so the index never reached
+Cloud Build at all and `.dockerignore` never got a say. Editing `.dockerignore`
+three times changed nothing.
+
+```
+# .gcloudignore — note it does NOT exclude data/index.*
+.git/
+.gitignore
+.venv/
+__pycache__/
+.env
+data/raw/
+data/*.txt
+data/*.png
+data/embed_cache.json
+docs/
+```
+
+**Same shape as every other failure in this project:** a rule written for one
+purpose silently governed another, and nothing errored until step 8 of 12, four
+minutes into the build.
+
+### What made it tractable
+
+Building and running the container locally first:
+
+```
+docker build -t myuniguide .
+docker run -p 8080:8080 --env-file .env myuniguide
+```
+
+Once it worked on `localhost:8080`, everything after was environment rather than
+code — which narrows the search enormously. Cloud Build is a clean environment
+and surfaces what a local machine hides.
+
+### Secrets
+
+The key was pasted into a chat window three times during this session and had to
+be rotated each time. Pass it via `--env-file .env` locally, and via
+`--set-env-vars` on deploy — then never copy the command line back anywhere.
+
+To rotate a deployed key without rebuilding:
+
+```
+gcloud run services update myuniguide --region europe-west1 \
+  --set-env-vars GEMINI_API_KEY=NEW_KEY
+```
+
+---
+
+## Step 12 — The evaluation set
 
 **50 questions with known answers, written before any pipeline code.** This is
 the gate: without it, no claim about the system is falsifiable.
@@ -1121,7 +1299,7 @@ biased in its favour. Corrections after that point would not be legitimate.
 
 ---
 
-## Step 11 — The long-context baseline
+## Step 13 — The long-context baseline
 
 **Deliberately low-tech: no code.** It runs once, and reading fifty raw responses
 by hand teaches you what the failure modes look like.

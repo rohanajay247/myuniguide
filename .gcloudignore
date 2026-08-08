@@ -1,0 +1,11 @@
+.git/
+.gitignore
+.venv/
+__pycache__/
+*.pyc
+.env
+data/raw/
+data/*.txt
+data/*.png
+data/embed_cache.json
+docs/
